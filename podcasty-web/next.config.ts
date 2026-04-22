@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
                 hostname: "lh3.googleusercontent.com",
             }, {
                 protocol: "https",
-                hostname: "lpcdhaeraghnskrvvxak.supabase.co",
+                hostname: "yffktxqtlybexfcsksqd.supabase.co",
             }, {
                 protocol: "https",
                 hostname: "ichef.bbci.co.uk",
