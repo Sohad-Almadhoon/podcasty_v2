@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { BsTrophyFill, BsHeadphones, BsHeartFill, BsMicFill } from "react-icons/bs";
 
+export const dynamic = "force-dynamic";
+
 export default async function LeaderboardPage() {
   const medals = ["🥇", "🥈", "🥉"];
   
@@ -12,6 +14,7 @@ export default async function LeaderboardPage() {
   try {
     leaderboard = await fetchLeaderboard({ limit: 20, sort_by: 'plays' });
   } catch (error) {
+    if ((error as { digest?: string })?.digest === 'DYNAMIC_SERVER_USAGE') throw error;
     console.error('Error fetching leaderboard:', error);
   }
 

@@ -15,6 +15,7 @@ Thumbs.db
 *.ipr
 *.iws
 .history/
+.claude/
 
 # === Logs ===
 *.log

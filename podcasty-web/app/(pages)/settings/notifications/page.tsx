@@ -2,6 +2,8 @@ import NotificationPreferencesForm from "@/components/forms/NotificationPreferen
 import { getNotificationPreferencesAction } from "@/app/lib/actions";
 import BackButton from "@/components/buttons/BackButton";
 
+export const dynamic = "force-dynamic";
+
 const NotificationSettingsPage = async () => {
   const result = await getNotificationPreferencesAction();
   // If preferences couldn't be loaded (e.g. table not yet migrated), fall back to defaults

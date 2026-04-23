@@ -30,6 +30,9 @@ async function getAuthToken(): Promise<string | null> {
     
     return session.access_token;
   } catch (error) {
+    if ((error as { digest?: string })?.digest === 'DYNAMIC_SERVER_USAGE') {
+      throw error;
+    }
     console.error('Error getting auth token:', error);
     return null;
   }

@@ -242,6 +242,7 @@ export async function getNotificationPreferencesAction(): Promise<{
     const preferences = await apiFetchNotificationPreferences();
     return { success: true, preferences };
   } catch (error: any) {
+    if (error?.digest === 'DYNAMIC_SERVER_USAGE') throw error;
     console.error('Error fetching notification preferences:', error);
     return { success: false, error: error.message || 'Failed to load preferences' };
   }
