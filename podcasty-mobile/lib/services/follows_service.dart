@@ -3,45 +3,37 @@ import 'api_client.dart';
 class FollowsService {
   static Future<void> followUser(String userId) async {
     await ApiClient.request(
-      endpoint: '/api/follows',
+      endpoint: '/api/users/follow',
       method: 'POST',
-      body: {'following_id': userId},
+      body: {'user_id': userId},
     );
   }
 
   static Future<void> unfollowUser(String userId) async {
     await ApiClient.request(
-      endpoint: '/api/follows/$userId',
+      endpoint: '/api/users/unfollow',
       method: 'DELETE',
+      queryParams: {'user_id': userId},
     );
   }
 
   static Future<bool> isFollowing(String userId) async {
     try {
       final data = await ApiClient.request(
-        endpoint: '/api/follows/check/$userId',
+        endpoint: '/api/users/follow/status',
+        queryParams: {'user_id': userId},
       );
-      return data['is_following'] == true;
+      return data['following'] == true;
     } catch (e) {
       return false;
     }
   }
 
-  static Future<List<Map<String, dynamic>>> fetchFollowers(String userId) async {
+  /// Returns the list of users that the current user is following.
+  /// Backend endpoint returns only the caller's own following list.
+  static Future<List<Map<String, dynamic>>> fetchMyFollowing() async {
     final data = await ApiClient.request(
-      endpoint: '/api/users/$userId/followers',
-    );
-
-    if (data is List) {
-      return data.cast<Map<String, dynamic>>();
-    }
-
-    return [];
-  }
-
-  static Future<List<Map<String, dynamic>>> fetchFollowing(String userId) async {
-    final data = await ApiClient.request(
-      endpoint: '/api/users/$userId/following',
+      endpoint: '/api/users/follows',
     );
 
     if (data is List) {

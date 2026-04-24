@@ -8,45 +8,52 @@ class PlaylistsService {
     final data = await ApiClient.request(
       endpoint: '/api/playlists',
     );
-    
+
     if (data is List) {
       return data.map((json) => Playlist.fromJson(json)).toList();
     }
-    
+
     return [];
   }
-  
+
   /// Create a new playlist
   static Future<Playlist> createPlaylist({
     required String name,
     String? description,
   }) async {
     final data = await ApiClient.request(
-      endpoint: '/api/playlists',
+      endpoint: '/api/playlists/create',
       method: 'POST',
       body: {
         'name': name,
         if (description != null) 'description': description,
       },
     );
-    
+
     return Playlist.fromJson(data);
   }
-  
+
   /// Add a podcast to a playlist
   static Future<void> addToPlaylist(String playlistId, String podcastId) async {
     await ApiClient.request(
-      endpoint: '/api/playlists/$playlistId/podcasts',
+      endpoint: '/api/playlists/items/add',
       method: 'POST',
-      body: {'podcast_id': podcastId},
+      body: {
+        'playlist_id': playlistId,
+        'podcast_id': podcastId,
+      },
     );
   }
-  
+
   /// Remove a podcast from a playlist
   static Future<void> removeFromPlaylist(String playlistId, String podcastId) async {
     await ApiClient.request(
-      endpoint: '/api/playlists/$playlistId/podcasts/$podcastId',
+      endpoint: '/api/playlists/items/remove',
       method: 'DELETE',
+      queryParams: {
+        'playlist_id': playlistId,
+        'podcast_id': podcastId,
+      },
     );
   }
 }

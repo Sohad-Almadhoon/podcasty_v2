@@ -66,7 +66,7 @@ class PodcastsService {
     int? durationSeconds,
   }) async {
     final data = await ApiClient.request(
-      endpoint: '/api/podcasts',
+      endpoint: '/api/podcasts/create',
       method: 'POST',
       body: {
         'title': title,
@@ -77,23 +77,25 @@ class PodcastsService {
         if (durationSeconds != null) 'duration_seconds': durationSeconds,
       },
     );
-    
+
     return Podcast.fromJson(data);
   }
-  
+
   /// Delete a podcast
   static Future<void> deletePodcast(String podcastId) async {
     await ApiClient.request(
-      endpoint: '/api/podcasts/$podcastId',
+      endpoint: '/api/podcasts/delete',
       method: 'DELETE',
+      queryParams: {'id': podcastId},
     );
   }
-  
+
   /// Increment play count for a podcast
   static Future<void> incrementPlayCount(String podcastId) async {
     await ApiClient.request(
-      endpoint: '/api/podcasts/$podcastId/play',
+      endpoint: '/api/podcasts/play',
       method: 'POST',
+      body: {'podcast_id': podcastId},
     );
   }
   

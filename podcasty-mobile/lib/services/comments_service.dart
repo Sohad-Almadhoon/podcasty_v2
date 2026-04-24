@@ -9,7 +9,7 @@ class Comment {
   final String? userImage;
   final String content;
   final DateTime createdAt;
-  
+
   Comment({
     required this.id,
     required this.podcastId,
@@ -19,16 +19,17 @@ class Comment {
     required this.content,
     required this.createdAt,
   });
-  
+
   factory Comment.fromJson(Map<String, dynamic> json) {
+    final user = (json['users'] is Map) ? json['users'] as Map : const {};
     return Comment(
-      id: json['id'] ?? '',
-      podcastId: json['podcast_id'] ?? '',
-      userId: json['user_id'] ?? '',
-      userName: json['user_name'] ?? '',
-      userImage: json['user_image'],
-      content: json['content'] ?? '',
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      id: json['id']?.toString() ?? '',
+      podcastId: json['podcast_id']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? '',
+      userName: (user['username'] ?? json['user_name'] ?? '').toString(),
+      userImage: (user['avatar_url'] ?? json['user_image']) as String?,
+      content: (json['body'] ?? json['content'] ?? '').toString(),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
     );
   }
 }
@@ -38,32 +39,37 @@ class CommentsService {
   /// Fetch comments for a podcast
   static Future<List<Comment>> fetchComments(String podcastId) async {
     final data = await ApiClient.request(
-      endpoint: '/api/podcasts/$podcastId/comments',
+      endpoint: '/api/podcasts/comments',
+      queryParams: {'podcast_id': podcastId},
     );
-    
+
     if (data is List) {
       return data.map((json) => Comment.fromJson(json)).toList();
     }
-    
+
     return [];
   }
-  
+
   /// Create a comment on a podcast
   static Future<Comment> createComment(String podcastId, String content) async {
     final data = await ApiClient.request(
-      endpoint: '/api/podcasts/$podcastId/comments',
+      endpoint: '/api/podcasts/comments/create',
       method: 'POST',
-      body: {'content': content},
+      body: {
+        'podcast_id': podcastId,
+        'body': content,
+      },
     );
-    
+
     return Comment.fromJson(data);
   }
-  
+
   /// Delete a comment
   static Future<void> deleteComment(String commentId) async {
     await ApiClient.request(
-      endpoint: '/api/comments/$commentId',
+      endpoint: '/api/comments/delete',
       method: 'DELETE',
+      queryParams: {'id': commentId},
     );
   }
 }

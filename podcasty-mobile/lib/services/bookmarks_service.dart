@@ -8,28 +8,29 @@ class BookmarksService {
     final data = await ApiClient.request(
       endpoint: '/api/bookmarks',
     );
-    
+
     if (data is List) {
       return data.map((json) => Podcast.fromJson(json)).toList();
     }
-    
+
     return [];
   }
-  
+
   /// Add a podcast to bookmarks
   static Future<void> addBookmark(String podcastId) async {
     await ApiClient.request(
-      endpoint: '/api/bookmarks',
+      endpoint: '/api/bookmarks/add',
       method: 'POST',
       body: {'podcast_id': podcastId},
     );
   }
-  
+
   /// Remove a podcast from bookmarks
   static Future<void> removeBookmark(String podcastId) async {
     await ApiClient.request(
-      endpoint: '/api/bookmarks/$podcastId',
+      endpoint: '/api/bookmarks/remove',
       method: 'DELETE',
+      queryParams: {'podcast_id': podcastId},
     );
   }
 }

@@ -23,15 +23,15 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
-      email: json['email'] ?? '',
-      imageUrl: json['image_url'],
-      bio: json['bio'],
-      followers: json['followers'] ?? 0,
-      following: json['following'] ?? 0,
-      podcastCount: json['podcast_count'] ?? 0,
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      id: json['id']?.toString() ?? '',
+      name: (json['username'] ?? json['name'] ?? '').toString(),
+      email: (json['email'] ?? '').toString(),
+      imageUrl: (json['avatar_url'] ?? json['image_url']) as String?,
+      bio: json['bio'] as String?,
+      followers: (json['followers'] ?? 0) as int,
+      following: (json['following'] ?? 0) as int,
+      podcastCount: (json['podcast_count'] ?? 0) as int,
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
     );
   }
 
