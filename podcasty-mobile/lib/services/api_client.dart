@@ -6,10 +6,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Core API client for making HTTP requests to the Go backend
 class ApiClient {
-  /// Base URL is platform-aware:
-  /// - Android emulator → `10.0.2.2` (maps to host machine's localhost)
-  /// - Everything else → `localhost`
+  /// Base URL resolution order:
+  /// 1. `--dart-define=API_BASE_URL=...` at build/run time (used for release APKs)
+  /// 2. Android emulator fallback → `10.0.2.2:8080` (maps to host's localhost)
+  /// 3. Everything else → `localhost:8080`
+  static const String _apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
+
   static String get baseUrl {
+    if (_apiBaseUrlOverride.isNotEmpty) {
+      return _apiBaseUrlOverride;
+    }
     if (!kIsWeb && Platform.isAndroid) {
       return 'http://10.0.2.2:8080';
     }
