@@ -8,6 +8,10 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
   const next = requestUrl.searchParams.get('next') ?? '/'
 
+  const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host')
+  const forwardedProto = request.headers.get('x-forwarded-proto') ?? requestUrl.protocol.replace(':', '')
+  const publicBase = forwardedHost ? `${forwardedProto}://${forwardedHost}` : requestUrl.origin
+
   if (code) {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -61,10 +65,10 @@ export async function GET(request: NextRequest) {
         }
       }
       
-      return NextResponse.redirect(new URL(next, request.url))
+      return NextResponse.redirect(new URL(next, publicBase))
     }
   }
 
   // Return the user to an error page with instructions
-  return NextResponse.redirect(new URL('/login?error=auth_failed', request.url))
+  return NextResponse.redirect(new URL('/login?error=auth_failed', publicBase))
 }
