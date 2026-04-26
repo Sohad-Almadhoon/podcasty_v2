@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { getUser } from "@/app/lib/supabase";
-import { generatePodcastAction, createPodcastAction } from "@/app/lib/actions";
+import { createPodcastAction } from "@/app/lib/actions";
 import { AiVoice, PodcastCategory } from "@/app/types";
 import { PODCAST_CATEGORIES } from "@/app/constants";
 import Image from "next/image";
@@ -48,30 +48,45 @@ export default function PodcastForm() {
   const generateAIContent = async (aiPrompt: string, aiVoice: AiVoice) => {
     setLoading(true);
     try {
-      const result = await generatePodcastAction({
-        prompt: aiPrompt,
-        voice: aiVoice,
+      // Browser → Go backend direct. The browser tolerates the long
+      // DALL-E + TTS + upload roundtrip, while a Server Action would
+      // be capped by the host's gateway timeout.
+      const tokenRes = await fetch("/api/auth/token");
+      if (!tokenRes.ok) throw new Error("You need to sign in first.");
+      const { access_token } = (await tokenRes.json()) as { access_token: string };
+
+      const apiBase = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiBase) throw new Error("NEXT_PUBLIC_API_URL is not configured.");
+
+      const res = await fetch(`${apiBase}/api/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+        },
+        body: JSON.stringify({ prompt: aiPrompt, voice: aiVoice }),
       });
 
-      if (result.success && result.imageUrl && result.audioUrl) {
-        setGeneratedPodcast({
-          imageUrl: result.imageUrl,
-          audioUrl: result.audioUrl,
-        });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Backend returned ${res.status}`);
+      }
+
+      const result = (await res.json()) as { image_url?: string; audio_url?: string };
+      if (result.image_url && result.audio_url) {
+        setGeneratedPodcast({ imageUrl: result.image_url, audioUrl: result.audio_url });
         toast.success("AI content generated!", {
           description: "Your audio and cover art are ready.",
         });
       } else {
-        console.error("Error generating AI content:", result.error);
         toast.error("Generation failed", {
-          description: result.error || "There was an error generating the AI content. Please try again.",
+          description: "Backend returned no content.",
         });
       }
-    } catch (error) {
-      console.error("Error generating AI content:", error);
-      toast.error("Generation failed", {
-        description: "There was an error generating the AI content. Please try again.",
-      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error("Error generating AI content:", message);
+      toast.error("Generation failed", { description: message });
     } finally {
       setLoading(false);
     }
@@ -145,7 +160,7 @@ export default function PodcastForm() {
   };
 
   return (
-    <div className="py-10 px-6">
+    <div className="py-8 sm:py-10 px-4 sm:px-6">
       <div className="w-full max-w-lg">
         <div className="mb-4">
           <BackButton />
