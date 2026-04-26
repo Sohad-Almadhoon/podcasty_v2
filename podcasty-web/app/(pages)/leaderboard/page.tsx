@@ -20,7 +20,7 @@ export default async function LeaderboardPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="border-b border-app-border px-6 py-8">
+      <div className="border-b border-app-border px-4 sm:px-6 py-6 sm:py-8">
         <p className="text-xs font-semibold text-app-subtle uppercase tracking-widest mb-2">Community</p>
         <h1 className="text-2xl font-bold text-app-text flex items-center gap-2">
           <BsTrophyFill className="text-yellow-500" /> Leaderboard
@@ -28,7 +28,7 @@ export default async function LeaderboardPage() {
         <p className="text-sm text-app-muted mt-1">Top creators ranked by total plays</p>
       </div>
 
-      <div className="px-6 py-8">
+      <div className="px-4 sm:px-6 py-6 sm:py-8">
         {/* Top 3 podium */}
         {leaderboard.length >= 3 && (
           <div className="grid grid-cols-3 gap-3 mb-10">
@@ -36,7 +36,7 @@ export default async function LeaderboardPage() {
             <Link
               key={entry.user_id}
               href={`/profile/${entry.user_id}`}
-              className={`flex flex-col items-center gap-3 p-5 rounded-xl border transition-all hover:shadow-app-md ${
+              className={`flex flex-col items-center gap-3 p-3 sm:p-5 rounded-xl border transition-all hover:shadow-app-md min-w-0 ${
                 i === 0
                   ? "border-yellow-500/40 bg-yellow-500/5"
                   : "border-app-border bg-app-surface hover:border-app-muted"
@@ -45,8 +45,8 @@ export default async function LeaderboardPage() {
               <div className="relative size-14 rounded-full overflow-hidden border-2 border-app-border">
                 <Image src={entry.avatar_url} alt={entry.username} fill unoptimized className="object-cover" />
               </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-app-text truncate max-w-[100px]">{entry.username}</p>
+              <div className="text-center min-w-0 w-full">
+                <p className="text-sm font-semibold text-app-text truncate">{entry.username}</p>
                 <p className="text-xs text-app-subtle mt-0.5">{entry.total_plays.toLocaleString()} plays</p>
               </div>
               <div className="flex gap-1.5 flex-wrap justify-center">

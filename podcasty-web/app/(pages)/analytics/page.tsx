@@ -58,7 +58,7 @@ export default async function AnalyticsPage() {
   return (
     <div className="min-h-screen pb-16">
       {/* Header */}
-      <div className="border-b border-app-border px-6 py-8">
+      <div className="border-b border-app-border px-4 sm:px-6 py-6 sm:py-8">
         <p className="text-xs font-semibold text-app-subtle uppercase tracking-widest mb-2">Creator</p>
         <h1 className="text-2xl font-bold text-app-text flex items-center gap-2">
           <BarChart3 className="w-6 h-6 text-app-accent" /> Analytics Dashboard
@@ -66,7 +66,7 @@ export default async function AnalyticsPage() {
         <p className="text-sm text-app-muted mt-1">Track how your podcasts are performing.</p>
       </div>
 
-      <div className="px-6 py-8 space-y-8">
+      <div className="px-4 sm:px-6 py-6 sm:py-8 space-y-8">
         {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat) => (

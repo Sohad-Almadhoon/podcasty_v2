@@ -65,12 +65,12 @@ const Profile = async (props: { params: paramsType }) => {
   return (
     <div className="min-h-screen">
       {/* Profile header */}
-      <div className="border-b border-app-border px-6 py-8">
+      <div className="border-b border-app-border px-4 sm:px-6 py-6 sm:py-8">
         <div className="mb-4">
           <BackButton />
         </div>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-5">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex items-center gap-4 sm:gap-5 min-w-0">
             <div className="relative size-16 rounded-full overflow-hidden border border-app-border shrink-0">
               <Image
                 src={user.avatar_url || "/images/1.jpeg"}
@@ -113,7 +113,7 @@ const Profile = async (props: { params: paramsType }) => {
       </div>
 
       {/* Podcasts */}
-      <div className="px-6 py-8">
+      <div className="px-4 sm:px-6 py-6 sm:py-8">
         <div className="flex items-center justify-between mb-6">
           <p className="text-xs font-semibold text-app-subtle uppercase tracking-widest">
             {isOwner ? "Your Podcasts" : `Podcasts by ${user.username}`}

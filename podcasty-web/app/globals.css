@@ -88,10 +88,14 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @layer base {
+  html {
+    overflow-x: clip;
+  }
   body {
     font-family: var(--font-montserrat), sans-serif;
     color: var(--app-text);
     min-height: 100dvh;
     background: var(--app-bg);
+    overflow-x: clip;
   }
 }

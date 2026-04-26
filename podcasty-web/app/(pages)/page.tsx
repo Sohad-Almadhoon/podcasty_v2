@@ -29,11 +29,11 @@ export default async function Home() {
   return (
     <main className="flex-1 min-h-screen">
       {/* Hero */}
-      <section className="border-b border-app-border px-6 py-12">
+      <section className="border-b border-app-border px-4 sm:px-6 py-8 sm:py-12">
         <Badge variant="outline" className="border-app-border text-app-muted mb-4">
           AI-Powered Podcasting
         </Badge>
-        <h1 className="text-4xl font-bold tracking-tight text-app-text mb-2">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-app-text mb-2 break-words">
           Welcome back,{" "}
           <span className="text-app-accent">{user.user_metadata.full_name?.split(" ")[0]}</span>
         </h1>
@@ -55,7 +55,7 @@ export default async function Home() {
       </section>
 
       {/* Features grid */}
-      <section className="border-b border-app-border px-6 py-10">
+      <section className="border-b border-app-border px-4 sm:px-6 py-8 sm:py-10">
         <p className="text-xs font-semibold text-app-subtle uppercase tracking-widest mb-6">What you can do</p>
         <div className="grid sm:grid-cols-2 gap-4">
           {features.map(({ icon: Icon, title, desc }) => (
@@ -72,7 +72,7 @@ export default async function Home() {
 
       {/* Trending */}
       {trending.length > 0 && (
-        <section className="px-6 py-10">
+        <section className="px-4 sm:px-6 py-8 sm:py-10">
           <div className="flex items-center justify-between mb-6">
             <p className="text-xs font-semibold text-app-subtle uppercase tracking-widest">Trending now</p>
             <Link href="/podcasts" className="text-xs text-app-accent hover:underline flex items-center gap-1">
@@ -99,7 +99,7 @@ export default async function Home() {
       )}
 
       {/* Quick-start CTA */}
-      <section className="mx-6 mb-10 rounded-xl border border-app-border bg-app-surface p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <section className="mx-4 sm:mx-6 mb-8 sm:mb-10 rounded-xl border border-app-border bg-app-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-app-text">Ready to create?</p>
           <p className="text-xs text-app-subtle mt-0.5">Your next podcast is one prompt away.</p>

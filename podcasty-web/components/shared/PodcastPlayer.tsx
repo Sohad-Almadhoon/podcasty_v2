@@ -146,7 +146,7 @@ const PodcastPlayer = () => {
         className="w-full"
         max={duration ? duration : 100}
       />
-      <section className="flex h-[90px] w-full items-center justify-between px-4 max-md:justify-center max-md:gap-5 md:px-12">
+      <section className="flex h-[80px] md:h-[90px] w-full items-center justify-between gap-3 sm:gap-5 px-3 sm:px-4 md:px-12">
         <audio
           ref={audioRef}
           src={audio?.audioUrl}
@@ -154,9 +154,9 @@ const PodcastPlayer = () => {
           onLoadedMetadata={handleLoadedMetadata}
           onEnded={handleAudioEnded}
         />
-        <div className="flex items-center gap-4 max-md:hidden">
-          <Link href={`/podcasts/${audio?.podcastId}`}>
-            <div className="relative size-14 overflow-hidden shadow-lg rounded-lg border border-app-border">
+        <div className="flex items-center gap-3 min-w-0 flex-1 md:flex-none">
+          <Link href={`/podcasts/${audio?.podcastId}`} className="shrink-0">
+            <div className="relative size-12 md:size-14 overflow-hidden shadow-lg rounded-lg border border-app-border">
               <Image
                 src={
                   audio?.imageUrl && audio.imageUrl.trim() !== ""
@@ -170,14 +170,14 @@ const PodcastPlayer = () => {
               />
             </div>
           </Link>
-          <div className="flex w-[160px] flex-col">
+          <div className="flex flex-col min-w-0 md:w-[160px]">
             <h2 className="text-sm truncate font-semibold text-app-text">
               {audio?.title}
             </h2>
-            <p className="text-xs text-app-subtle">{audio?.author}</p>
+            <p className="text-xs text-app-subtle truncate">{audio?.author}</p>
           </div>
         </div>
-        <div className="flex items-center cursor-pointer gap-3 md:gap-6">
+        <div className="flex items-center cursor-pointer gap-3 md:gap-6 shrink-0">
           <div className="flex items-center gap-1.5 text-app-muted hover:text-app-text transition-colors">
             <BiRewind className="text-2xl cursor-pointer" onClick={rewind} />
             <span className="text-xs font-bold text-app-subtle">-5</span>
@@ -192,7 +192,7 @@ const PodcastPlayer = () => {
             <BiFastForward onClick={forward} className="text-2xl cursor-pointer" />
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4 shrink-0">
           <span className="text-sm font-normal text-app-subtle max-md:hidden">
             {formatTime(duration)}
           </span>
@@ -204,7 +204,7 @@ const PodcastPlayer = () => {
           >
             {playbackRate}x
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 max-sm:hidden">
             {isMuted ? (
               <BsVolumeMute onClick={toggleMute} className="text-2xl text-app-muted hover:text-app-text cursor-pointer transition-colors" />
             ) : (

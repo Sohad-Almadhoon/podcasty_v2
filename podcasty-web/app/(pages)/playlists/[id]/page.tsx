@@ -26,7 +26,7 @@ export default async function PlaylistDetailPage(props: { params: paramsType }) 
 
   return (
     <div className="min-h-screen">
-      <div className="border-b border-app-border px-6 py-8">
+      <div className="border-b border-app-border px-4 sm:px-6 py-6 sm:py-8">
         <div className="mb-4">
           <BackButton />
         </div>
@@ -62,7 +62,7 @@ export default async function PlaylistDetailPage(props: { params: paramsType }) 
         </div>
       </div>
 
-      <div className="px-6 py-8">
+      <div className="px-4 sm:px-6 py-6 sm:py-8">
         {podcasts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <BsCollectionPlayFill className="text-app-border text-5xl mb-4" />

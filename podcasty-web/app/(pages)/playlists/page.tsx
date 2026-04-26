@@ -38,7 +38,7 @@ export default function PlaylistsPage() {
     <div className="min-h-screen">
       <CreatePlaylistModal isOpen={isModalOpen} onClose={handleModalClose} />
       
-      <div className="border-b border-app-border px-6 py-8">
+      <div className="border-b border-app-border px-4 sm:px-6 py-6 sm:py-8">
         <p className="text-xs font-semibold text-app-subtle uppercase tracking-widest mb-2">Library</p>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-app-text flex items-center gap-2">
@@ -52,7 +52,7 @@ export default function PlaylistsPage() {
         </div>
       </div>
 
-      <div className="px-6 py-8">
+      <div className="px-4 sm:px-6 py-6 sm:py-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-app-accent"></div>

@@ -19,7 +19,7 @@ const NotificationSettingsPage = async () => {
 
   return (
     <div className="min-h-screen pb-16">
-      <div className="border-b border-app-border px-6 py-8">
+      <div className="border-b border-app-border px-4 sm:px-6 py-6 sm:py-8">
         <div className="mb-4">
           <BackButton />
         </div>
@@ -32,7 +32,7 @@ const NotificationSettingsPage = async () => {
         </p>
       </div>
 
-      <div className="px-6 py-8 max-w-xl">
+      <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-xl">
         {result.error && (
           <div className="mb-4 rounded-lg border border-app-border bg-app-surface px-4 py-3 text-xs text-app-subtle">
             Couldn&apos;t load saved preferences ({result.error}). Showing defaults — your changes will still be saved.
