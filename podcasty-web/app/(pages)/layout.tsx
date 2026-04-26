@@ -19,8 +19,8 @@ export default async function GroupedLayout({
     <>
       <LeftSidebar />
         {" "}
-        <main className="flex-1">
-          <div className="flex px-4 h-16 items-center justify-between md:hidden border-b border-app-border bg-app-surface/90 backdrop-blur-sm">
+        <main className="flex-1 min-w-0">
+          <div className="flex px-4 h-16 items-center justify-between lg:hidden border-b border-app-border bg-app-surface/90 backdrop-blur-sm">
             <Logo />
             <div className="flex items-center gap-1">
               <ThemeToggle iconOnly />
