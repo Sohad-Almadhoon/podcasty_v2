@@ -62,10 +62,10 @@ export const verifyOtp = async (email: string, token: string) => {
 }
 
 export const signOut = async () => {
-    const { error } = await (await getSupabaseAuth()).auth.signOut();
-    if (error) {
-        console.log(error);
-    } else {
-        return redirect('/login');
+    try {
+        await (await getSupabaseAuth()).auth.signOut();
+    } catch (error) {
+        console.error('signOut error:', error);
     }
+    redirect('/login');
 }
