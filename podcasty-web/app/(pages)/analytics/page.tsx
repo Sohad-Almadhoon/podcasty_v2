@@ -6,6 +6,11 @@ import { BarChart3, Headphones, Heart, MessageCircle, Users } from "lucide-react
 import { Separator } from "@/components/ui/separator";
 import AnalyticsCharts from "@/components/shared/AnalyticsCharts";
 
+export const dynamic = "force-dynamic";
+
+const isDynamicServerUsage = (e: unknown) =>
+  (e as { digest?: string })?.digest === "DYNAMIC_SERVER_USAGE";
+
 export default async function AnalyticsPage() {
   const user = await getUser();
   if (!user) redirect("/login");
@@ -13,20 +18,28 @@ export default async function AnalyticsPage() {
   let podcasts: any[] = [];
   try {
     podcasts = await fetchUserPodcasts(user.id);
-  } catch {
-    podcasts = [];
+  } catch (error) {
+    if (isDynamicServerUsage(error)) throw error;
+    console.error("Error fetching user podcasts:", error);
   }
 
   // Fetch analytics for each podcast
   const analyticsData: any[] = [];
-  for (const podcast of podcasts) {
-    try {
-      const data = await fetchPodcastAnalytics(podcast.id);
-      analyticsData.push({ ...data, podcast_name: podcast.podcast_name, image_url: podcast.image_url });
-    } catch {
-      // Skip podcasts where analytics fail
+  const analyticsResults = await Promise.allSettled(
+    podcasts.map((p) => fetchPodcastAnalytics(p.id))
+  );
+  analyticsResults.forEach((result, i) => {
+    if (result.status === "fulfilled") {
+      const p = podcasts[i];
+      analyticsData.push({
+        ...result.value,
+        podcast_name: p.podcast_name,
+        image_url: p.image_url,
+      });
+    } else if (isDynamicServerUsage(result.reason)) {
+      throw result.reason;
     }
-  }
+  });
 
   // Aggregate totals
   const totals = {

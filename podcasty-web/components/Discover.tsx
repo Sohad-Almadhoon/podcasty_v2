@@ -89,34 +89,36 @@ const Discover = () => {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row gap-3 mb-3">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
         <input
           type="text"
           placeholder="Search podcasts..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-10 px-4 rounded-lg flex-1 bg-app-surface border border-app-border text-app-text placeholder:text-app-subtle focus:outline-none focus:border-app-muted transition-colors text-sm"
+          className="h-10 px-4 rounded-lg flex-1 min-w-0 bg-app-surface border border-app-border text-app-text placeholder:text-app-subtle focus:outline-none focus:border-app-muted transition-colors text-sm"
         />
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value as PodcastCategory | "")}
-          className="h-10 px-4 rounded-lg sm:w-48 w-full bg-app-surface border border-app-border text-app-text focus:outline-none focus:border-app-muted transition-colors text-sm"
-        >
-          <option value="">All Categories</option>
-          {PODCAST_CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={() => setShowFilters((v) => !v)}
-          className="h-10 px-4 rounded-lg inline-flex items-center gap-2 bg-app-surface border border-app-border text-app-text hover:border-app-muted transition-colors text-sm"
-        >
-          <SlidersHorizontal className="w-4 h-4" />
-          Filters
-        </button>
+        <div className="flex gap-2 sm:gap-3">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value as PodcastCategory | "")}
+            className="h-10 px-3 sm:px-4 rounded-lg flex-1 sm:flex-none sm:w-48 min-w-0 bg-app-surface border border-app-border text-app-text focus:outline-none focus:border-app-muted transition-colors text-sm"
+          >
+            <option value="">All Categories</option>
+            {PODCAST_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setShowFilters((v) => !v)}
+            className="h-10 px-3 sm:px-4 rounded-lg inline-flex items-center gap-2 bg-app-surface border border-app-border text-app-text hover:border-app-muted transition-colors text-sm shrink-0"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            <span className="hidden sm:inline">Filters</span>
+          </button>
+        </div>
       </div>
 
       {showFilters && (

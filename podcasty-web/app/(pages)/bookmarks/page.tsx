@@ -40,7 +40,7 @@ export default async function BookmarksPage() {
             </Link>
           </div>
         ) : (
-          <ul className="flex flex-col gap-3">
+          <ul className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {bookmarks.map((bookmark) => {
               const p = bookmark.podcasts;
               if (!p) return null; // Skip if podcast data is missing
