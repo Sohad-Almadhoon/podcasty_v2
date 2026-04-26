@@ -6,7 +6,7 @@ import React, { useState, useEffect } from "react";
 import PodcastCard from "./shared/PodcastCard";
 import LoaderSpinner from "@/app/(pages)/loading";
 import { fetchPodcasts, type PodcastSort } from "@/app/lib/api/public";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 
 const useDebounce = <T,>(value: T, delay = 300) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -89,39 +89,34 @@ const Discover = () => {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-app-subtle pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search podcasts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-11 sm:h-10 w-full pl-10 pr-4 rounded-lg bg-app-surface border border-app-border text-app-text placeholder:text-app-subtle focus:outline-none focus:border-app-muted transition-colors text-base sm:text-sm"
-          />
-        </div>
-        <div className="flex gap-2 sm:gap-3">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value as PodcastCategory | "")}
-            className="h-11 sm:h-10 px-3 sm:px-4 rounded-lg flex-1 sm:flex-none sm:w-48 min-w-0 bg-app-surface border border-app-border text-app-text focus:outline-none focus:border-app-muted transition-colors text-base sm:text-sm"
-          >
-            <option value="">All Categories</option>
-            {PODCAST_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => setShowFilters((v) => !v)}
-            className="h-11 sm:h-10 px-3 sm:px-4 rounded-lg inline-flex items-center gap-2 bg-app-surface border border-app-border text-app-text hover:border-app-muted transition-colors text-sm shrink-0"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            <span className="hidden sm:inline">Filters</span>
-          </button>
-        </div>
+      <div className="flex flex-col sm:flex-row gap-3 mb-3">
+        <input
+          type="text"
+          placeholder="Search podcasts..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-10 px-4 rounded-lg flex-1 bg-app-surface border border-app-border text-app-text placeholder:text-app-subtle focus:outline-none focus:border-app-muted transition-colors text-sm"
+        />
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value as PodcastCategory | "")}
+          className="h-10 px-4 rounded-lg sm:w-48 w-full bg-app-surface border border-app-border text-app-text focus:outline-none focus:border-app-muted transition-colors text-sm"
+        >
+          <option value="">All Categories</option>
+          {PODCAST_CATEGORIES.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => setShowFilters((v) => !v)}
+          className="h-10 px-4 rounded-lg inline-flex items-center gap-2 bg-app-surface border border-app-border text-app-text hover:border-app-muted transition-colors text-sm"
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          Filters
+        </button>
       </div>
 
       {showFilters && (

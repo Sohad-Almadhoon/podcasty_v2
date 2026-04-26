@@ -4,12 +4,16 @@
  * These functions handle authenticated requests from client components
  */
 
-import {
-  createPodcast as apiCreatePodcast,
+import { 
+  createPodcast as apiCreatePodcast, 
   deletePodcast as apiDeletePodcast,
 } from './api/podcasts';
 
-import {
+import { 
+  generatePodcastContent as apiGeneratePodcastContent,
+} from './api/generation';
+
+import { 
   likePodcast as apiLikePodcast,
   unlikePodcast as apiUnlikePodcast,
 } from './api/likes';
@@ -41,6 +45,26 @@ import {
 } from './api/notifications';
 
 import { revalidatePath } from 'next/cache';
+
+export async function generatePodcastAction(data: {
+  prompt: string;
+  voice: string;
+}): Promise<{ success: boolean; imageUrl?: string; audioUrl?: string; error?: string }> {
+  try {
+    const result = await apiGeneratePodcastContent(data);
+    return {
+      success: true,
+      imageUrl: result.image_url,
+      audioUrl: result.audio_url,
+    };
+  } catch (error: any) {
+    console.error('Error generating podcast content:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to generate podcast content',
+    };
+  }
+}
 
 export async function createPodcastAction(data: {
   podcast_name: string;

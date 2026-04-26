@@ -15,7 +15,7 @@ export default async function BookmarksPage() {
   }
   return (
     <div className="min-h-screen">
-      <div className="border-b border-app-border px-4 sm:px-6 py-6 sm:py-8">
+      <div className="border-b border-app-border px-6 py-8">
         <p className="text-xs font-semibold text-app-subtle uppercase tracking-widest mb-2">Library</p>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-app-text flex items-center gap-2">
@@ -27,7 +27,7 @@ export default async function BookmarksPage() {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 py-6 sm:py-8">
+      <div className="px-6 py-8">
         {bookmarks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <BsBookmarkFill className="text-app-border text-5xl mb-4" />
@@ -40,7 +40,7 @@ export default async function BookmarksPage() {
             </Link>
           </div>
         ) : (
-          <ul className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          <ul className="flex flex-col gap-3">
             {bookmarks.map((bookmark) => {
               const p = bookmark.podcasts;
               if (!p) return null; // Skip if podcast data is missing
@@ -48,8 +48,8 @@ export default async function BookmarksPage() {
               return (
                 <li key={bookmark.id}>
                   <Link href={`/podcasts/${p.id}`}>
-                    <div className="flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 sm:py-4 rounded-xl border border-app-border bg-app-surface hover:border-app-muted hover:shadow-app transition-all group">
-                      <div className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-lg overflow-hidden border border-app-border">
+                    <div className="flex items-center gap-4 px-4 py-4 rounded-xl border border-app-border bg-app-surface hover:border-app-muted hover:shadow-app transition-all group">
+                      <div className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden border border-app-border">
                         <Image
                           src={p.image_url || "/images/1.jpeg"}
                           alt={p.podcast_name}
@@ -61,7 +61,7 @@ export default async function BookmarksPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-app-text truncate">{p.podcast_name}</p>
                         <p className="text-xs text-app-subtle truncate mt-0.5">{p.description}</p>
-                        <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2">
+                        <div className="flex items-center gap-3 mt-2">
                           <span className="text-xs text-app-subtle flex items-center gap-1">
                             <Mic2 className="w-3 h-3" />
                             {p.users?.username || "Unknown"}
@@ -74,12 +74,9 @@ export default async function BookmarksPage() {
                               {p.category}
                             </Badge>
                           )}
-                          <Badge variant="outline" className="border-app-border text-app-subtle text-xs gap-1 py-0 sm:hidden">
-                            <BsHeadphones /> {(p.play_count || 0).toLocaleString()}
-                          </Badge>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0 max-sm:hidden">
+                      <div className="flex flex-col items-end gap-2 shrink-0">
                         <div className="flex gap-2">
                           <Badge variant="outline" className="border-app-border text-app-subtle text-xs gap-1 py-0">
                             <BsHeadphones /> {(p.play_count || 0).toLocaleString()}

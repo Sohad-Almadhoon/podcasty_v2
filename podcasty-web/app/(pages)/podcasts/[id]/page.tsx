@@ -83,7 +83,7 @@ const PodcastDetails = async (props: { params: paramsType }) => {
     return (
       <div className="min-h-screen pb-16">
         {/* Header banner */}
-        <div className="border-b border-app-border px-4 sm:px-6 py-6 sm:py-8">
+        <div className="border-b border-app-border px-6 py-8">
           <div className="mb-4">
             <BackButton />
           </div>
@@ -105,7 +105,7 @@ const PodcastDetails = async (props: { params: paramsType }) => {
                 <Badge variant="outline" className="border-app-border text-app-muted mb-2 text-xs">
                   Podcast
                 </Badge>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-app-text leading-tight break-words">
+                <h1 className="text-2xl font-bold tracking-tight text-app-text leading-tight">
                   {podcast.podcast_name || "Untitled Podcast"}
                 </h1>
                 <Link
@@ -126,7 +126,7 @@ const PodcastDetails = async (props: { params: paramsType }) => {
               </div>
 
               {/* Primary actions */}
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-3">
                 <PlayPodcastButton podcast={podcast} />
                 {podcast.users && <LikeButton podcastId={id} userId={podcast.user_id} />}
                 <span className="text-xs text-app-subtle flex items-center gap-1.5 px-3 py-2 rounded-lg border border-app-border bg-app-surface">
@@ -135,7 +135,7 @@ const PodcastDetails = async (props: { params: paramsType }) => {
               </div>
 
               {/* Secondary actions bar */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-3 p-1.5 rounded-xl border border-app-border bg-app-surface/50 w-fit max-w-full">
+              <div className="flex items-center gap-1.5 mt-3 p-1.5 rounded-xl border border-app-border bg-app-surface/50 w-fit">
                 <BookmarkButton podcastId={id} />
                 <AddToPlaylistButton podcastId={id} />
                 <ShareButton podcastId={id} title={podcast.podcast_name || "Untitled Podcast"} />
@@ -153,7 +153,7 @@ const PodcastDetails = async (props: { params: paramsType }) => {
         </div>
 
         {/* Body */}
-        <div className="px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        <div className="px-6 py-8 space-y-8">
           {/* Info pills */}
           <div className="flex flex-wrap gap-3">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-app-border bg-app-surface text-xs text-app-muted">

@@ -43,7 +43,7 @@ export default async function SeriesDetailPage(props: { params: Promise<{ id: st
   return (
     <div className="min-h-screen pb-16">
       {/* Header */}
-      <div className="border-b border-app-border px-4 sm:px-6 py-6 sm:py-8">
+      <div className="border-b border-app-border px-6 py-8">
         <div className="mb-4">
           <BackButton />
         </div>
@@ -91,7 +91,7 @@ export default async function SeriesDetailPage(props: { params: Promise<{ id: st
       )}
 
       {/* Episodes by season */}
-      <div className="px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+      <div className="px-6 py-8 space-y-8">
         {sortedSeasons.length === 0 ? (
           <div className="rounded-xl border border-dashed border-app-border p-10 text-center">
             <Mic2 className="w-8 h-8 text-app-subtle mx-auto mb-3" />

@@ -6,11 +6,6 @@ import { BarChart3, Headphones, Heart, MessageCircle, Users } from "lucide-react
 import { Separator } from "@/components/ui/separator";
 import AnalyticsCharts from "@/components/shared/AnalyticsCharts";
 
-export const dynamic = "force-dynamic";
-
-const isDynamicServerUsage = (e: unknown) =>
-  (e as { digest?: string })?.digest === "DYNAMIC_SERVER_USAGE";
-
 export default async function AnalyticsPage() {
   const user = await getUser();
   if (!user) redirect("/login");
@@ -18,28 +13,20 @@ export default async function AnalyticsPage() {
   let podcasts: any[] = [];
   try {
     podcasts = await fetchUserPodcasts(user.id);
-  } catch (error) {
-    if (isDynamicServerUsage(error)) throw error;
-    console.error("Error fetching user podcasts:", error);
+  } catch {
+    podcasts = [];
   }
 
   // Fetch analytics for each podcast
   const analyticsData: any[] = [];
-  const analyticsResults = await Promise.allSettled(
-    podcasts.map((p) => fetchPodcastAnalytics(p.id))
-  );
-  analyticsResults.forEach((result, i) => {
-    if (result.status === "fulfilled") {
-      const p = podcasts[i];
-      analyticsData.push({
-        ...result.value,
-        podcast_name: p.podcast_name,
-        image_url: p.image_url,
-      });
-    } else if (isDynamicServerUsage(result.reason)) {
-      throw result.reason;
+  for (const podcast of podcasts) {
+    try {
+      const data = await fetchPodcastAnalytics(podcast.id);
+      analyticsData.push({ ...data, podcast_name: podcast.podcast_name, image_url: podcast.image_url });
+    } catch {
+      // Skip podcasts where analytics fail
     }
-  });
+  }
 
   // Aggregate totals
   const totals = {
@@ -71,7 +58,7 @@ export default async function AnalyticsPage() {
   return (
     <div className="min-h-screen pb-16">
       {/* Header */}
-      <div className="border-b border-app-border px-4 sm:px-6 py-6 sm:py-8">
+      <div className="border-b border-app-border px-6 py-8">
         <p className="text-xs font-semibold text-app-subtle uppercase tracking-widest mb-2">Creator</p>
         <h1 className="text-2xl font-bold text-app-text flex items-center gap-2">
           <BarChart3 className="w-6 h-6 text-app-accent" /> Analytics Dashboard
@@ -79,7 +66,7 @@ export default async function AnalyticsPage() {
         <p className="text-sm text-app-muted mt-1">Track how your podcasts are performing.</p>
       </div>
 
-      <div className="px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+      <div className="px-6 py-8 space-y-8">
         {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat) => (

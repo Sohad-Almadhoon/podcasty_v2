@@ -43,9 +43,7 @@ const AnalyticsCharts = ({ data }: { data: DataPoint[] }) => {
   const xLabelCount = Math.min(visible.length, 5);
   const xLabels: { x: number; label: string }[] = [];
   for (let i = 0; i < xLabelCount; i++) {
-    const idx = xLabelCount === 1
-      ? 0
-      : Math.round((i / (xLabelCount - 1)) * (visible.length - 1));
+    const idx = Math.round((i / (xLabelCount - 1)) * (visible.length - 1));
     xLabels.push({ x: points[idx].x, label: formatDate(visible[idx].date) });
   }
 

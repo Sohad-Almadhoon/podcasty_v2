@@ -17,7 +17,7 @@ export default async function SeriesPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="border-b border-app-border px-4 sm:px-6 py-6 sm:py-8">
+      <div className="border-b border-app-border px-6 py-8">
         <p className="text-xs font-semibold text-app-subtle uppercase tracking-widest mb-2">Library</p>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-app-text flex items-center gap-2">
@@ -27,7 +27,7 @@ export default async function SeriesPage() {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 py-6 sm:py-8">
+      <div className="px-6 py-8">
         {allSeries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Layers className="text-app-border w-12 h-12 mb-4" />
