@@ -134,7 +134,7 @@ const Profile = async (props: { params: paramsType }) => {
             {podcasts.map((podcast) => (
               <li
                 key={podcast.id}
-                className="relative group shrink-0 w-[260px] sm:w-[280px] snap-start">
+                className="relative group shrink-0 w-full snap-start">
                 <Link href={`/podcasts/${podcast.id}`}>
                   <PodcastCard podcast={podcast} />
                 </Link>
