@@ -6,7 +6,7 @@ import React, { useState, useEffect } from "react";
 import PodcastCard from "./shared/PodcastCard";
 import LoaderSpinner from "@/app/(pages)/loading";
 import { fetchPodcasts, type PodcastSort } from "@/app/lib/api/public";
-import { SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 
 const useDebounce = <T,>(value: T, delay = 300) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -90,13 +90,16 @@ const Discover = () => {
   return (
     <div>
       <div className="flex flex-col sm:flex-row gap-3 mb-3">
-        <input
-          type="text"
-          placeholder="Search podcasts..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-10 px-4 rounded-lg flex-1 bg-app-surface border border-app-border text-app-text placeholder:text-app-subtle focus:outline-none focus:border-app-muted transition-colors text-sm"
-        />
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-app-subtle pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search podcasts..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-11 sm:h-10 w-full pl-10 pr-4 rounded-lg bg-app-surface border border-app-border text-app-text placeholder:text-app-subtle focus:outline-none focus:border-app-muted transition-colors text-base sm:text-sm"
+          />
+        </div>
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value as PodcastCategory | "")}
