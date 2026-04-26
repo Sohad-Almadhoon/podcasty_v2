@@ -21,32 +21,40 @@ const MobileNav = async () => {
       <SheetTrigger asChild>
         <AiOutlineMenu className="text-app-text text-3xl cursor-pointer" />
       </SheetTrigger>
-      <SheetContent side="left" className="border-none border-r border-app-border bg-app-bg w-72 p-0">
-        <SheetTitle className="hidden">
-        <VisuallyHidden>Menu</VisuallyHidden>
+      <SheetContent side="left" className="border-r border-app-border bg-app-bg w-72 p-0 flex flex-col">
+        <SheetTitle>
+          <VisuallyHidden>Menu</VisuallyHidden>
         </SheetTitle>
-        <div className="flex h-[calc(100vh-72px)] flex-col justify-between overflow-y-auto mt-12">
+
+        <nav className="flex-1 overflow-y-auto px-4 pt-12 pb-4">
           <SheetClose asChild>
-            <div className="flex gap-8 flex-col">
+            <div className="flex flex-col gap-1">
               <SidebarLinks />
-              {user ? (
-                <div className="flex flex-col gap-8 ml-5">
-                  <Link
-                    href={`/profile/${user.id}`}
-                    className="text-app-muted hover:text-app-text flex items-center gap-4 transition-colors">
-                    <BiSolidUserVoice /> My Profile
-                  </Link>
-                  <LogoutButton />
-                </div>
-              ) : (
-                <Link
-                  href={`/login`}
-                  className="text-app-muted hover:text-app-text flex items-center gap-4 transition-colors">
-                  <BiLogIn /> Login
-                </Link>
-              )}
             </div>
           </SheetClose>
+        </nav>
+
+        <div className="border-t border-app-border px-4 py-4 flex flex-col gap-3">
+          {user ? (
+            <>
+              <SheetClose asChild>
+                <Link
+                  href={`/profile/${user.id}`}
+                  className="text-app-muted hover:text-app-text flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-app-raised transition-colors text-sm">
+                  <BiSolidUserVoice className="text-base" /> My Profile
+                </Link>
+              </SheetClose>
+              <LogoutButton />
+            </>
+          ) : (
+            <SheetClose asChild>
+              <Link
+                href={`/login`}
+                className="text-app-muted hover:text-app-text flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-app-raised transition-colors text-sm">
+                <BiLogIn className="text-base" /> Login
+              </Link>
+            </SheetClose>
+          )}
         </div>
       </SheetContent>
     </Sheet>
