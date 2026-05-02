@@ -130,11 +130,11 @@ const Profile = async (props: { params: paramsType }) => {
         <Separator className="bg-app-border mb-6" />
 
         {podcasts.length > 0 ? (
-          <ul className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-6 px-6 pb-4 scrollbar-thin">
+          <ul className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-6 px-6 pb-4 scrollbar-thin sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0 lg:grid-cols-3">
             {podcasts.map((podcast) => (
               <li
                 key={podcast.id}
-                className="relative group shrink-0 w-full snap-start">
+                className="relative group shrink-0 w-[calc(100vw-3rem)] snap-start sm:w-auto">
                 <Link href={`/podcasts/${podcast.id}`}>
                   <PodcastCard podcast={podcast} />
                 </Link>
