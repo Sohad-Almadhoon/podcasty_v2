@@ -12,11 +12,40 @@ import (
 
 // User represents a user in the database
 type User struct {
-	ID        string `json:"id"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	AvatarURL string `json:"avatar_url"`
-	CreatedAt string `json:"created_at"`
+	ID           string `json:"id"`
+	Username     string `json:"username"`
+	Email        string `json:"email"`
+	AvatarURL    string `json:"avatar_url"`
+	CreatedAt    string `json:"created_at"`
+	Followers    int    `json:"followers"`
+	Following    int    `json:"following"`
+	PodcastCount int    `json:"podcast_count"`
+}
+
+// fetchHeadCount returns the row count for a PostgREST query by fetching IDs
+// and counting them. Returns 0 on any error so a partial response stays usable.
+// PostgREST default page size caps the result at 1000 rows.
+func (h *Handler) fetchHeadCount(table, filter string) int {
+	q := fmt.Sprintf("%s?%s&select=id", table, filter)
+	data, err := h.DB.Query(q, http.MethodGet, nil)
+	if err != nil {
+		return 0
+	}
+	var rows []map[string]any
+	if err := json.Unmarshal(data, &rows); err != nil {
+		return 0
+	}
+	return len(rows)
+}
+
+// attachUserCounts populates Followers, Following and PodcastCount on the user
+// using independent count queries. Each query is best-effort; if any fails the
+// corresponding count stays 0.
+func (h *Handler) attachUserCounts(u *User) {
+	id := url.QueryEscape(u.ID)
+	u.Followers = h.fetchHeadCount("follows", fmt.Sprintf("following_id=eq.%s", id))
+	u.Following = h.fetchHeadCount("follows", fmt.Sprintf("follower_id=eq.%s", id))
+	u.PodcastCount = h.fetchHeadCount("podcasts", fmt.Sprintf("user_id=eq.%s", id))
 }
 
 // GetUser returns a user by ID
@@ -120,12 +149,14 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		fmt.Printf("✅ Successfully auto-created user %s\n", userID)
+		h.attachUserCounts(&createdUsers[0])
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(createdUsers[0])
 		return
 	}
 
 	// Return single user
+	h.attachUserCounts(&users[0])
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users[0])
 }
