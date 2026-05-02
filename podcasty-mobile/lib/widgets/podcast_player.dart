@@ -106,6 +106,8 @@ class PodcastPlayer extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 _PlayerBtn(icon: Icons.forward_10_rounded, size: 22, onTap: audio.skipForward),
+                const SizedBox(width: 2),
+                _PlayerBtn(icon: Icons.close_rounded, size: 20, onTap: audio.stop),
               ],
             ),
           ),

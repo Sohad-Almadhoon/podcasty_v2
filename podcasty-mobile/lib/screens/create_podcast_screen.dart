@@ -90,12 +90,21 @@ class _CreatePodcastScreenState extends State<CreatePodcastScreen> {
     }
     setState(() => _publishing = true);
     try {
+      final cleanedChapters = <Map<String, dynamic>>[];
+      for (final c in _chapters) {
+        final title = c.title.text.trim();
+        final start = _parseTs(c.start.text);
+        if (title.isEmpty || start == null) continue;
+        cleanedChapters.add({'title': title, 'start': start});
+      }
       await PodcastsService.createPodcast(
         title: _nameCtrl.text.trim(),
         description: _descCtrl.text.trim(),
         audioUrl: _audioUrl!,
         imageUrl: _imageUrl!,
         category: _category,
+        aiVoice: _voice,
+        chapters: cleanedChapters.isEmpty ? null : cleanedChapters,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Published!')));

@@ -1,25 +1,29 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Core API client for making HTTP requests to the Go backend
 class ApiClient {
+  /// Number of in-flight requests that have exceeded the warmup threshold.
+  /// UI listens to this to show a "waking server up" banner during Render
+  /// free-tier cold starts.
+  static final ValueNotifier<int> warmingRequests = ValueNotifier<int>(0);
+  static const Duration _warmupThreshold = Duration(seconds: 2);
+
   /// Base URL resolution order:
-  /// 1. `--dart-define=API_BASE_URL=...` at build/run time (used for release APKs)
-  /// 2. Android emulator fallback → `10.0.2.2:8080` (maps to host's localhost)
-  /// 3. Everything else → `localhost:8080`
+  /// 1. `--dart-define=API_BASE_URL=...` at build/run time (e.g. local dev:
+  ///    `http://10.0.2.2:8080` for Android emulator, `http://localhost:8080` otherwise)
+  /// 2. Default → deployed backend on Render
   static const String _apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
+  static const String _defaultBaseUrl = 'https://podcasty-backend.onrender.com';
 
   static String get baseUrl {
     if (_apiBaseUrlOverride.isNotEmpty) {
       return _apiBaseUrlOverride;
     }
-    if (!kIsWeb && Platform.isAndroid) {
-      return 'http://10.0.2.2:8080';
-    }
-    return 'http://localhost:8080';
+    return _defaultBaseUrl;
   }
   
   // Shared preferences key for storing auth token
@@ -58,54 +62,56 @@ class ApiClient {
     Map<String, dynamic>? body,
     Map<String, String>? queryParams,
   }) async {
-    try {
-      final token = await _getAuthToken();
-      
-      // Build the URL with query parameters
-      final uri = _buildUri(endpoint, queryParams);
-      
-      // Build headers
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
-      
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
+    return _withWarmupTracking(() async {
+      try {
+        final token = await _getAuthToken();
+
+        // Build the URL with query parameters
+        final uri = _buildUri(endpoint, queryParams);
+
+        // Build headers
+        final headers = <String, String>{
+          'Content-Type': 'application/json',
+        };
+
+        if (token != null) {
+          headers['Authorization'] = 'Bearer $token';
+        }
+
+        // Make the request
+        http.Response response;
+
+        switch (method.toUpperCase()) {
+          case 'GET':
+            response = await http.get(uri, headers: headers);
+            break;
+          case 'POST':
+            response = await http.post(
+              uri,
+              headers: headers,
+              body: body != null ? jsonEncode(body) : null,
+            );
+            break;
+          case 'PUT':
+            response = await http.put(
+              uri,
+              headers: headers,
+              body: body != null ? jsonEncode(body) : null,
+            );
+            break;
+          case 'DELETE':
+            response = await http.delete(uri, headers: headers);
+            break;
+          default:
+            throw ApiException('Unsupported HTTP method: $method');
+        }
+
+        return _handleResponse(response);
+      } catch (e) {
+        if (e is ApiException) rethrow;
+        throw ApiException('Network error: $e');
       }
-      
-      // Make the request
-      http.Response response;
-      
-      switch (method.toUpperCase()) {
-        case 'GET':
-          response = await http.get(uri, headers: headers);
-          break;
-        case 'POST':
-          response = await http.post(
-            uri,
-            headers: headers,
-            body: body != null ? jsonEncode(body) : null,
-          );
-          break;
-        case 'PUT':
-          response = await http.put(
-            uri,
-            headers: headers,
-            body: body != null ? jsonEncode(body) : null,
-          );
-          break;
-        case 'DELETE':
-          response = await http.delete(uri, headers: headers);
-          break;
-        default:
-          throw ApiException('Unsupported HTTP method: $method');
-      }
-      
-      return _handleResponse(response);
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error: $e');
-    }
+    });
   }
   
   /// Make a public API request (no authentication required)
@@ -114,27 +120,49 @@ class ApiClient {
     String method = 'GET',
     Map<String, String>? queryParams,
   }) async {
-    try {
-      final uri = _buildUri(endpoint, queryParams);
-      
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
-      
-      http.Response response;
-      
-      switch (method.toUpperCase()) {
-        case 'GET':
-          response = await http.get(uri, headers: headers);
-          break;
-        default:
-          throw ApiException('Unsupported HTTP method for public request: $method');
+    return _withWarmupTracking(() async {
+      try {
+        final uri = _buildUri(endpoint, queryParams);
+
+        final headers = <String, String>{
+          'Content-Type': 'application/json',
+        };
+
+        http.Response response;
+
+        switch (method.toUpperCase()) {
+          case 'GET':
+            response = await http.get(uri, headers: headers);
+            break;
+          default:
+            throw ApiException('Unsupported HTTP method for public request: $method');
+        }
+
+        return _handleResponse(response);
+      } catch (e) {
+        if (e is ApiException) rethrow;
+        throw ApiException('Network error: $e');
       }
-      
-      return _handleResponse(response);
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error: $e');
+    });
+  }
+
+  /// Wraps an async API call with cold-start tracking. If the call exceeds
+  /// [_warmupThreshold] the [warmingRequests] counter is incremented so the UI
+  /// can surface a "waking server up" banner; the counter is decremented in a
+  /// finally block once the call completes (success or failure).
+  static Future<T> _withWarmupTracking<T>(Future<T> Function() action) async {
+    var warming = false;
+    final timer = Timer(_warmupThreshold, () {
+      warming = true;
+      warmingRequests.value = warmingRequests.value + 1;
+    });
+    try {
+      return await action();
+    } finally {
+      timer.cancel();
+      if (warming) {
+        warmingRequests.value = warmingRequests.value - 1;
+      }
     }
   }
   

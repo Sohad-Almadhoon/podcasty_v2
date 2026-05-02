@@ -63,18 +63,20 @@ class PodcastsService {
     required String audioUrl,
     required String imageUrl,
     required String category,
-    int? durationSeconds,
+    String? aiVoice,
+    List<Map<String, dynamic>>? chapters,
   }) async {
     final data = await ApiClient.request(
       endpoint: '/api/podcasts/create',
       method: 'POST',
       body: {
-        'title': title,
+        'podcast_name': title,
         'description': description,
         'audio_url': audioUrl,
         'image_url': imageUrl,
         'category': category,
-        if (durationSeconds != null) 'duration_seconds': durationSeconds,
+        if (aiVoice != null) 'ai_voice': aiVoice,
+        if (chapters != null && chapters.isNotEmpty) 'chapters': chapters,
       },
     );
 
