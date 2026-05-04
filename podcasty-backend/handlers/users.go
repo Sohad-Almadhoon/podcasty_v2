@@ -22,6 +22,69 @@ type User struct {
 	PodcastCount int    `json:"podcast_count"`
 }
 
+// EnsurePublicUser checks that a row exists in public.users for the given
+// auth user id, and auto-creates one from auth.users metadata if it doesn't.
+// Required before inserting any row that has a FK to public.users — without
+// the on_auth_user_created trigger installed on the database, fresh sign-ups
+// have no public.users row and inserts fail with FK violations.
+func (h *Handler) EnsurePublicUser(userID string) error {
+	if userID == "" {
+		return fmt.Errorf("empty user id")
+	}
+
+	checkQuery := fmt.Sprintf("users?id=eq.%s&select=id", url.QueryEscape(userID))
+	checkData, err := h.DB.Query(checkQuery, http.MethodGet, nil)
+	if err != nil {
+		return fmt.Errorf("check user: %w", err)
+	}
+
+	var rows []map[string]any
+	if err := json.Unmarshal(checkData, &rows); err != nil {
+		return fmt.Errorf("parse check: %w", err)
+	}
+	if len(rows) > 0 {
+		return nil // user exists
+	}
+
+	if h.DB.ServiceKey == "" {
+		return fmt.Errorf("service key not configured; cannot auto-create user")
+	}
+
+	authUser, err := h.DB.GetAuthUser(userID)
+	if err != nil {
+		return fmt.Errorf("fetch auth user: %w", err)
+	}
+
+	email, _ := authUser["email"].(string)
+	username := email
+	avatarURL := ""
+	if meta, ok := authUser["user_metadata"].(map[string]any); ok {
+		if name, ok := meta["full_name"].(string); ok && name != "" {
+			username = name
+		}
+		if avatar, ok := meta["avatar_url"].(string); ok {
+			avatarURL = avatar
+		} else if avatar, ok := meta["picture"].(string); ok {
+			avatarURL = avatar
+		}
+	}
+	if username == "" {
+		username = "User"
+	}
+
+	fmt.Printf("ℹ️  Auto-creating public.users row for %s (%s)\n", userID, email)
+	newUser := map[string]any{
+		"id":         userID,
+		"email":      email,
+		"username":   username,
+		"avatar_url": avatarURL,
+	}
+	if _, err := h.DB.Query("users", http.MethodPost, newUser); err != nil {
+		return fmt.Errorf("insert user: %w", err)
+	}
+	return nil
+}
+
 // fetchHeadCount returns the row count for a PostgREST query by fetching IDs
 // and counting them. Returns 0 on any error so a partial response stays usable.
 // PostgREST default page size caps the result at 1000 rows.

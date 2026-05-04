@@ -261,6 +261,13 @@ func (h *Handler) CreatePodcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Make sure the public.users row exists — podcasts.user_id has a FK to it,
+	// and the on_auth_user_created trigger isn't always installed on every env.
+	if err := h.EnsurePublicUser(userID); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to ensure user exists: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	// Validate AI voice if provided
 	validVoices := []string{"alloy", "echo", "fable", "onyx", "nova", "shimmer"}
 	if req.AIVoice != "" {
@@ -332,6 +339,14 @@ func (h *Handler) CreatePodcast(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Failed to parse created podcast: %v. Raw response: %s", err, string(data)), http.StatusInternalServerError)
 			return
 		}
+	}
+
+	// Guard against Supabase returning an empty/placeholder row (e.g. when
+	// Prefer: return=representation is silently dropped) — without this the
+	// client gets a 201 for a row that was never persisted.
+	if createdPodcast.ID == "" {
+		http.Error(w, fmt.Sprintf("Supabase returned a podcast without an id. Raw response: %s", string(data)), http.StatusInternalServerError)
+		return
 	}
 
 	// Return created podcast

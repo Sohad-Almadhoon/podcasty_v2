@@ -322,7 +322,10 @@ func (h *Handler) AddPlaylistItem(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// RemovePlaylistItem removes a podcast from a playlist
+// RemovePlaylistItem removes a podcast from a playlist.
+//
+// Accepts either ?id=<playlist_items.id> or the pair
+// ?playlist_id=<...>&podcast_id=<...> (also via JSON body for POST).
 func (h *Handler) RemovePlaylistItem(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete && r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -335,24 +338,61 @@ func (h *Handler) RemovePlaylistItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get item_id from query params or request body
-	itemID := r.URL.Query().Get("id")
+	q := r.URL.Query()
+	itemID := q.Get("id")
+	playlistID := q.Get("playlist_id")
+	podcastID := q.Get("podcast_id")
 
-	if itemID == "" && r.Method == http.MethodPost {
+	if r.Method == http.MethodPost && itemID == "" && (playlistID == "" || podcastID == "") {
 		var requestBody struct {
-			ItemID string `json:"item_id"`
+			ItemID     string `json:"item_id"`
+			PlaylistID string `json:"playlist_id"`
+			PodcastID  string `json:"podcast_id"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&requestBody); err == nil {
-			itemID = requestBody.ItemID
+			if itemID == "" {
+				itemID = requestBody.ItemID
+			}
+			if playlistID == "" {
+				playlistID = requestBody.PlaylistID
+			}
+			if podcastID == "" {
+				podcastID = requestBody.PodcastID
+			}
 		}
 	}
 
-	if itemID == "" {
-		http.Error(w, "item_id is required", http.StatusBadRequest)
+	if itemID == "" && (playlistID == "" || podcastID == "") {
+		http.Error(w, "item_id or (playlist_id and podcast_id) is required", http.StatusBadRequest)
 		return
 	}
 
-	// Get the item to verify ownership through playlist
+	// Resolve to a concrete playlist_items row id, then verify the playlist
+	// belongs to the caller.
+	if itemID == "" {
+		lookup := fmt.Sprintf(
+			"playlist_items?playlist_id=eq.%s&podcast_id=eq.%s&select=id",
+			url.QueryEscape(playlistID),
+			url.QueryEscape(podcastID),
+		)
+		lookupData, err := h.DB.Query(lookup, http.MethodGet, nil)
+		if err != nil {
+			http.Error(w, "Error checking item: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		var rows []map[string]any
+		if err := json.Unmarshal(lookupData, &rows); err != nil || len(rows) == 0 {
+			http.Error(w, "Item not found", http.StatusNotFound)
+			return
+		}
+		if id, ok := rows[0]["id"].(string); ok {
+			itemID = id
+		} else {
+			http.Error(w, "Item not found", http.StatusNotFound)
+			return
+		}
+	}
+
 	itemQuery := fmt.Sprintf("playlist_items?id=eq.%s&select=*,playlists(user_id)", url.QueryEscape(itemID))
 	data, err := h.DB.Query(itemQuery, http.MethodGet, nil)
 	if err != nil {
@@ -366,7 +406,6 @@ func (h *Handler) RemovePlaylistItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify ownership (check if playlist belongs to user)
 	if playlist, ok := item[0]["playlists"].(map[string]any); ok {
 		if playlistUserID, ok := playlist["user_id"].(string); !ok || playlistUserID != userID {
 			http.Error(w, "Not authorized to remove this item", http.StatusForbidden)
@@ -374,7 +413,6 @@ func (h *Handler) RemovePlaylistItem(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Delete the item
 	deleteQuery := fmt.Sprintf("playlist_items?id=eq.%s", url.QueryEscape(itemID))
 	if _, err := h.DB.Query(deleteQuery, http.MethodDelete, nil); err != nil {
 		http.Error(w, "Error removing item: "+err.Error(), http.StatusInternalServerError)
