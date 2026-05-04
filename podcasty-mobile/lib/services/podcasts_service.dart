@@ -80,7 +80,13 @@ class PodcastsService {
       },
     );
 
-    return Podcast.fromJson(data);
+    final podcast = Podcast.fromJson(data);
+    if (podcast.id.isEmpty) {
+      throw ApiException(
+        'Server returned a podcast without an id; the row was not persisted.',
+      );
+    }
+    return podcast;
   }
 
   /// Delete a podcast

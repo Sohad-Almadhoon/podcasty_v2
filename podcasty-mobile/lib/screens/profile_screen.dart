@@ -19,6 +19,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
+  final PageController _podcastPageCtrl = PageController(viewportFraction: 0.88);
+  int _podcastPage = 0;
   User? _user;
   List<Podcast> _podcasts = [];
   bool _isLoading = true;
@@ -35,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void dispose() {
     _tabCtrl.dispose();
+    _podcastPageCtrl.dispose();
     super.dispose();
   }
 
@@ -78,6 +81,22 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _openEdit() async {
+    if (_user == null) return;
+    final updated = await showModalBottomSheet<User>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => _EditProfileSheet(user: _user!),
+    );
+    if (updated != null && mounted) {
+      setState(() => _user = updated);
     }
   }
 
@@ -143,6 +162,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 foregroundColor: _isFollowing ? colors.onSurface : Colors.white,
                                 side: _isFollowing ? BorderSide(color: colors.outline) : BorderSide.none,
                               ),
+                            )
+                          else
+                            OutlinedButton.icon(
+                              onPressed: _openEdit,
+                              icon: const Icon(Icons.edit_rounded, size: 18),
+                              label: const Text('Edit profile'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: colors.onSurface,
+                                side: BorderSide(color: colors.outline),
+                              ),
                             ),
                         ]),
                       ),
@@ -201,13 +230,54 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-      itemCount: _podcasts.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 14),
-      itemBuilder: (ctx, i) => PodcastCard(
-        podcast: _podcasts[i],
-        onTap: () => Navigator.pushNamed(context, '/podcast-detail', arguments: _podcasts[i].id),
+    final colors = Theme.of(context).colorScheme;
+    final primary = Theme.of(context).primaryColor;
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 24),
+      child: Column(
+        children: [
+          Expanded(
+            child: PageView.builder(
+              controller: _podcastPageCtrl,
+              itemCount: _podcasts.length,
+              onPageChanged: (i) => setState(() => _podcastPage = i),
+              itemBuilder: (ctx, i) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: PodcastCard(
+                    podcast: _podcasts[i],
+                    onTap: () => Navigator.pushNamed(context, '/podcast-detail', arguments: _podcasts[i].id),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (_podcasts.length > 1) ...[
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(_podcasts.length, (i) {
+                final active = i == _podcastPage;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: active ? 18 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: active ? primary : colors.outline,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${_podcastPage + 1} / ${_podcasts.length}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -255,5 +325,152 @@ class _InfoRow extends StatelessWidget {
       const SizedBox(height: 4),
       Text(value, style: Theme.of(context).textTheme.bodyLarge),
     ]);
+  }
+}
+
+class _EditProfileSheet extends StatefulWidget {
+  final User user;
+  const _EditProfileSheet({required this.user});
+
+  @override
+  State<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends State<_EditProfileSheet> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _avatarCtrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.user.name);
+    _avatarCtrl = TextEditingController(text: widget.user.imageUrl ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _avatarCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _nameCtrl.text.trim();
+    final avatar = _avatarCtrl.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Username is required')),
+      );
+      return;
+    }
+    final nameChanged = name != widget.user.name;
+    final avatarChanged = avatar != (widget.user.imageUrl ?? '');
+    if (!nameChanged && !avatarChanged) {
+      Navigator.pop(context);
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final updated = await UsersService.updateUser(
+        widget.user.id,
+        username: nameChanged ? name : null,
+        avatarUrl: avatarChanged ? avatar : null,
+      );
+      if (mounted) Navigator.pop(context, updated);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+        setState(() => _saving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final inset = MediaQuery.of(context).viewInsets.bottom;
+    final avatar = _avatarCtrl.text.trim();
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + inset),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Center(
+          child: Container(
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+              color: colors.outline,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text('Edit Profile', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 18),
+
+        // Avatar preview
+        Center(
+          child: CircleAvatar(
+            radius: 38,
+            backgroundColor: colors.surface,
+            backgroundImage: avatar.isNotEmpty ? CachedNetworkImageProvider(avatar) : null,
+            child: avatar.isEmpty
+                ? Text(
+                    widget.user.name.isNotEmpty ? widget.user.name[0].toUpperCase() : '?',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(height: 18),
+
+        Text('Username', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _nameCtrl,
+          enabled: !_saving,
+          decoration: const InputDecoration(hintText: 'Your name'),
+          maxLength: 50,
+        ),
+        const SizedBox(height: 6),
+        Text('Avatar URL', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _avatarCtrl,
+          enabled: !_saving,
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(hintText: 'https://example.com/avatar.jpg'),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Paste any image URL — try DiceBear: https://api.dicebear.com/7.x/avataaars/svg?seed=YOURNAME',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 18),
+        Row(children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _saving ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Save'),
+            ),
+          ),
+        ]),
+      ]),
+    );
   }
 }

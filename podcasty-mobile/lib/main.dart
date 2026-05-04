@@ -19,7 +19,6 @@ import 'screens/leaderboard_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'widgets/podcast_player.dart';
-import 'widgets/warmup_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,13 +84,6 @@ class MainLayout extends StatelessWidget {
       body: Stack(
         children: [
           child,
-          // Cold-start warmup banner at top
-          const Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            child: WarmupBanner(),
-          ),
           // Audio Player at bottom
           const Positioned(
             left: 0,

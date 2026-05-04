@@ -1,5 +1,6 @@
 import 'api_client.dart';
 import '../models/playlist.dart';
+import '../models/podcast.dart';
 
 /// Service for playlist-related API operations
 class PlaylistsService {
@@ -14,6 +15,30 @@ class PlaylistsService {
     }
 
     return [];
+  }
+
+  /// Fetch the podcasts inside a playlist, in playlist order.
+  ///
+  /// The backend keeps items in a separate `playlist_items` table joined to
+  /// podcasts, so we hit that endpoint instead of relying on a `podcast_ids`
+  /// field on the playlist record (which the API never returns).
+  static Future<List<Podcast>> fetchPlaylistItems(String playlistId) async {
+    final data = await ApiClient.request(
+      endpoint: '/api/playlists/items',
+      queryParams: {'playlist_id': playlistId},
+    );
+
+    if (data is! List) return [];
+
+    return data
+        .map((item) {
+          if (item is Map && item['podcasts'] is Map) {
+            return Podcast.fromJson(Map<String, dynamic>.from(item['podcasts']));
+          }
+          return null;
+        })
+        .whereType<Podcast>()
+        .toList();
   }
 
   /// Create a new playlist

@@ -108,7 +108,7 @@ class _CreatePodcastScreenState extends State<CreatePodcastScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Published!')));
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Publish failed: $e')));

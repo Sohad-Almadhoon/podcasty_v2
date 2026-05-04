@@ -151,7 +151,7 @@ class _PlaylistCard extends StatelessWidget {
                   Text(playlist.description!, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
                 const SizedBox(height: 6),
-                Text('${playlist.podcastIds.length} episodes', style: Theme.of(context).textTheme.bodySmall),
+                Text('${playlist.itemCount} episodes', style: Theme.of(context).textTheme.bodySmall),
               ]),
             ),
             Icon(Icons.chevron_right_rounded, size: 20, color: Theme.of(context).colorScheme.outline),

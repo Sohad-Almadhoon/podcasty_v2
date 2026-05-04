@@ -3,14 +3,26 @@ import '../models/podcast.dart';
 
 /// Service for bookmark-related API operations
 class BookmarksService {
-  /// Fetch user's bookmarks
+  /// Fetch user's bookmarks. The API returns Bookmark rows with the embedded
+  /// podcast under `podcasts`; unwrap it so callers get podcasts directly.
   static Future<List<Podcast>> fetchBookmarks() async {
     final data = await ApiClient.request(
       endpoint: '/api/bookmarks',
     );
 
     if (data is List) {
-      return data.map((json) => Podcast.fromJson(json)).toList();
+      return data
+          .map((row) {
+            if (row is Map && row['podcasts'] is Map) {
+              return Podcast.fromJson(Map<String, dynamic>.from(row['podcasts']));
+            }
+            // Fall back to treating the row itself as a podcast for forward
+            // compatibility with shape changes.
+            return row is Map ? Podcast.fromJson(Map<String, dynamic>.from(row)) : null;
+          })
+          .whereType<Podcast>()
+          .where((p) => p.id.isNotEmpty)
+          .toList();
     }
 
     return [];
@@ -32,5 +44,15 @@ class BookmarksService {
       method: 'DELETE',
       queryParams: {'podcast_id': podcastId},
     );
+  }
+
+  /// Whether the current user has bookmarked the podcast.
+  static Future<bool> getBookmarkStatus(String podcastId) async {
+    final data = await ApiClient.request(
+      endpoint: '/api/bookmarks/status',
+      queryParams: {'podcast_id': podcastId},
+    );
+    if (data is Map) return data['bookmarked'] == true;
+    return false;
   }
 }

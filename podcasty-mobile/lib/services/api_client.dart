@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Core API client for making HTTP requests to the Go backend
 class ApiClient {
@@ -29,8 +30,20 @@ class ApiClient {
   // Shared preferences key for storing auth token
   static const String _tokenKey = 'auth_token';
   
-  /// Get the stored authentication token from SharedPreferences
+  /// Get the auth token to send with API requests.
+  ///
+  /// Supabase rotates access tokens in memory (every ~hour by default) without
+  /// writing them back to SharedPreferences, and on cold-start the persisted
+  /// copy may not exist yet when the first request fires. So we always prefer
+  /// the live Supabase session token and fall back to SharedPreferences only
+  /// when Supabase isn't initialised (e.g. unit tests).
   static Future<String?> _getAuthToken() async {
+    try {
+      final live = Supabase.instance.client.auth.currentSession?.accessToken;
+      if (live != null && live.isNotEmpty) return live;
+    } catch (_) {
+      // Supabase not initialised — fall through to the persisted token.
+    }
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_tokenKey);
   }

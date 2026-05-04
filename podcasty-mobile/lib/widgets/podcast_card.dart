@@ -35,6 +35,7 @@ class PodcastCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Image ──

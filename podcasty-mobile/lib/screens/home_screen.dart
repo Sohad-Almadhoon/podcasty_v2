@@ -142,7 +142,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 10),
               OutlinedButton.icon(
-                onPressed: () => Navigator.pushNamed(context, '/create-podcast'),
+                onPressed: () async {
+                  final created = await Navigator.pushNamed(context, '/create-podcast');
+                  if (created == true && mounted) _load();
+                },
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text('Create'),
                 style: OutlinedButton.styleFrom(

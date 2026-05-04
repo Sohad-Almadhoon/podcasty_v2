@@ -67,7 +67,10 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
       appBar: AppBar(title: const Text('Discover')),
       drawer: const AppDrawer(),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, '/create-podcast'),
+        onPressed: () async {
+          final created = await Navigator.pushNamed(context, '/create-podcast');
+          if (created == true && mounted) _load();
+        },
         icon: const Icon(Icons.add_rounded),
         label: const Text('Create'),
       ),
@@ -136,7 +139,10 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
                       title: 'No podcasts found',
                       subtitle: 'Try a different search or category',
                       actionLabel: 'Create podcast',
-                      onAction: () => Navigator.pushNamed(context, '/create-podcast'),
+                      onAction: () async {
+                        final created = await Navigator.pushNamed(context, '/create-podcast');
+                        if (created == true && mounted) _load();
+                      },
                     )
                   : RefreshIndicator(
                       onRefresh: _load,

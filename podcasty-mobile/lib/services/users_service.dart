@@ -36,4 +36,24 @@ class UsersService {
     }
     return fetchUser(supaUser.id);
   }
+
+  /// Update the current user's profile. Only non-null fields are sent.
+  static Future<User> updateUser(
+    String userId, {
+    String? username,
+    String? avatarUrl,
+  }) async {
+    final body = <String, dynamic>{};
+    if (username != null) body['username'] = username;
+    if (avatarUrl != null) body['avatar_url'] = avatarUrl;
+    if (body.isEmpty) {
+      throw ApiException('Nothing to update');
+    }
+    final data = await ApiClient.request(
+      endpoint: '/api/users/$userId',
+      method: 'PUT',
+      body: body,
+    );
+    return User.fromJson(data);
+  }
 }
