@@ -1,0 +1,53 @@
+name: Supabase Keepalive
+
+# Supabase free-tier projects are paused after ~7 days of inactivity.
+# This workflow sends a lightweight read request to the Supabase REST API
+# on a schedule so the project stays awake (avoids cold-start / paused DB).
+#
+# Setup (one time):
+#   Repo → Settings → Secrets and variables → Actions → New repository secret
+#     SUPABASE_URL       e.g. https://yffktxqtlybexfcsksqd.supabase.co
+#     SUPABASE_ANON_KEY  the anon/public key (NOT the service_role key)
+#
+# Note: GitHub disables scheduled workflows after 60 days of repo inactivity,
+# and schedule times can be delayed under load — both are fine for a keepalive.
+
+on:
+  schedule:
+    # Twice a day, at 06:00 and 18:00 UTC. Plenty to beat the 7-day pause.
+    - cron: "0 6,18 * * *"
+  # Allow running manually from the Actions tab to test.
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_ANON_KEY repository secrets must be set."
+            exit 1
+          fi
+
+          # HEAD-style read against a small table with limit=1. Any 2xx keeps
+          # the project active. We use users; swap the table if you prefer.
+          status=$(curl -sS -o /tmp/body.txt -w "%{http_code}" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            "${SUPABASE_URL}/rest/v1/users?select=id&limit=1")
+
+          echo "HTTP status: ${status}"
+          echo "Response body:"
+          cat /tmp/body.txt
+
+          # 2xx = success. Anything else fails the run so you get notified.
+          if [ "${status}" -lt 200 ] || [ "${status}" -ge 300 ]; then
+            echo "::error::Supabase keepalive ping failed with status ${status}"
+            exit 1
+          fi
+
+          echo "✅ Supabase is awake."
