@@ -4,11 +4,163 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
+
+// openAIMaxAttempts bounds how many times a single OpenAI call is retried when
+// the API answers 429 or 5xx. Keep it small: the caller is a user sitting on a
+// form submission, and image + audio generation is already slow.
+const openAIMaxAttempts = 3
+
+// ttsMaxInput is the input ceiling for the tts-1 model. Anything longer is
+// rejected by OpenAI with a 400 that reads like a generic bad request.
+const ttsMaxInput = 4096
+
+// Shared clients so connections are reused. The zero http.Client has no timeout
+// at all, which lets a stalled call hold the request open indefinitely — the
+// kind of long-lived connection that upstream proxies throttle.
+var (
+	openAIClient        = &http.Client{Timeout: 2 * time.Minute}
+	imageDownloadClient = &http.Client{Timeout: 60 * time.Second}
+)
+
+// upstreamError carries the status a third-party API responded with, so the
+// handler can relay it rather than flattening every failure into a 500. A
+// client that receives 429 can back off; one that receives 500 cannot tell
+// whether to retry, fix its input, or top up an account.
+type upstreamError struct {
+	Status    int
+	Message   string
+	Retryable bool
+}
+
+func (e *upstreamError) Error() string { return e.Message }
+
+// statusOf reports the status an error should be relayed to the client as,
+// defaulting to 500 for anything that isn't an upstream failure.
+func statusOf(err error) int {
+	var ue *upstreamError
+	if errors.As(err, &ue) {
+		return ue.Status
+	}
+	return http.StatusInternalServerError
+}
+
+// openAIError turns an OpenAI failure payload into a message worth showing.
+// The API wraps errors in {"error": {"message": ..., "code": ...}}; the raw
+// body is the fallback for anything that doesn't parse.
+func openAIError(status int, body []byte) *upstreamError {
+	var parsed struct {
+		Error struct {
+			Message string `json:"message"`
+			Code    string `json:"code"`
+			Type    string `json:"type"`
+		} `json:"error"`
+	}
+
+	msg := strings.TrimSpace(string(body))
+	retryable := status == http.StatusTooManyRequests || status >= 500
+
+	if err := json.Unmarshal(body, &parsed); err == nil && parsed.Error.Message != "" {
+		msg = parsed.Error.Message
+		// A 429 means two different things and the fixes are unrelated: a rate
+		// limit clears on its own, an exhausted account never will.
+		if parsed.Error.Code == "insufficient_quota" {
+			msg = "OpenAI account has no remaining credit: " + msg
+			retryable = false
+		}
+	}
+
+	if msg == "" {
+		msg = http.StatusText(status)
+	}
+	if r := []rune(msg); len(r) > 500 {
+		msg = string(r[:500]) + "..."
+	}
+
+	return &upstreamError{Status: status, Message: msg, Retryable: retryable}
+}
+
+// backoffFor reports how long to wait before retrying attempt n. OpenAI's
+// Retry-After wins when present, capped so a long hint can't stall the request
+// past the client's own patience.
+func backoffFor(attempt int, retryAfter string) time.Duration {
+	if secs, err := strconv.Atoi(strings.TrimSpace(retryAfter)); err == nil && secs > 0 {
+		if d := time.Duration(secs) * time.Second; d < 30*time.Second {
+			return d
+		}
+		return 30 * time.Second
+	}
+	return time.Duration(1<<uint(attempt-1)) * time.Second
+}
+
+// callOpenAI POSTs payload to an OpenAI endpoint and returns the response body,
+// retrying transient failures with backoff. The body is read in full either
+// way: image responses are JSON, audio responses are the raw MP3.
+func callOpenAI(apiKey, url string, payload any) ([]byte, error) {
+	reqBody, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	var lastErr error
+
+	for attempt := 1; attempt <= openAIMaxAttempts; attempt++ {
+		httpReq, err := http.NewRequest("POST", url, bytes.NewReader(reqBody))
+		if err != nil {
+			return nil, err
+		}
+		httpReq.Header.Set("Content-Type", "application/json")
+		httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+
+		resp, err := openAIClient.Do(httpReq)
+		if err != nil {
+			lastErr = err
+			if attempt == openAIMaxAttempts {
+				break
+			}
+			time.Sleep(backoffFor(attempt, ""))
+			continue
+		}
+
+		body, readErr := io.ReadAll(resp.Body)
+		retryAfter := resp.Header.Get("Retry-After")
+		status := resp.StatusCode
+		resp.Body.Close()
+
+		if readErr != nil {
+			lastErr = readErr
+			if attempt == openAIMaxAttempts {
+				break
+			}
+			time.Sleep(backoffFor(attempt, ""))
+			continue
+		}
+
+		if status == http.StatusOK {
+			return body, nil
+		}
+
+		apiErr := openAIError(status, body)
+		lastErr = apiErr
+
+		// A bad prompt, revoked key, or content-policy rejection fails
+		// identically no matter how many times it is sent.
+		if !apiErr.Retryable || attempt == openAIMaxAttempts {
+			break
+		}
+		time.Sleep(backoffFor(attempt, retryAfter))
+	}
+
+	return nil, lastErr
+}
 
 // GeneratePodcast generates both AI cover image and audio in one request
 func (h *Handler) GeneratePodcast(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +185,13 @@ func (h *Handler) GeneratePodcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The prompt doubles as the TTS input, so reject anything the speech model
+	// will refuse before spending a DALL-E call on it.
+	if len(req.Prompt) > ttsMaxInput {
+		http.Error(w, fmt.Sprintf("prompt must be %d characters or fewer", ttsMaxInput), http.StatusBadRequest)
+		return
+	}
+
 	if req.Voice == "" {
 		req.Voice = "alloy"
 	}
@@ -46,14 +205,16 @@ func (h *Handler) GeneratePodcast(w http.ResponseWriter, r *http.Request) {
 	// 1. Generate image using DALL-E
 	imageURL, err := h.generateImageInternal(req.Prompt)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to generate image: %v", err), http.StatusInternalServerError)
+		log.Printf("⚠️ [generate] image failed (%d): %v", statusOf(err), err)
+		http.Error(w, fmt.Sprintf("Failed to generate image: %v", err), statusOf(err))
 		return
 	}
 
 	// 2. Generate audio using TTS
 	audioURL, err := h.generateAudioInternal(req.Prompt, req.Voice)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to generate audio: %v", err), http.StatusInternalServerError)
+		log.Printf("⚠️ [generate] audio failed (%d): %v", statusOf(err), err)
+		http.Error(w, fmt.Sprintf("Failed to generate audio: %v", err), statusOf(err))
 		return
 	}
 
@@ -69,35 +230,14 @@ func (h *Handler) GeneratePodcast(w http.ResponseWriter, r *http.Request) {
 
 // generateImageInternal is a helper function to generate image
 func (h *Handler) generateImageInternal(prompt string) (string, error) {
-	openAIReq := map[string]any{
+	body, err := callOpenAI(h.Config.OpenAIAPIKey, "https://api.openai.com/v1/images/generations", map[string]any{
 		"model":  "dall-e-3",
 		"prompt": prompt,
 		"n":      1,
 		"size":   "1024x1024",
-	}
-
-	reqBody, _ := json.Marshal(openAIReq)
-	openAIURL := "https://api.openai.com/v1/images/generations"
-
-	httpReq, err := http.NewRequest("POST", openAIURL, bytes.NewBuffer(reqBody))
+	})
 	if err != nil {
 		return "", err
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+h.Config.OpenAIAPIKey)
-
-	client := &http.Client{}
-	resp, err := client.Do(httpReq)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("OpenAI API error: %s", string(body))
 	}
 
 	var openAIResp struct {
@@ -137,38 +277,12 @@ func (h *Handler) generateImageInternal(prompt string) (string, error) {
 
 // generateAudioInternal is a helper function to generate audio and return as data URL
 func (h *Handler) generateAudioInternal(text, voice string) (string, error) {
-	openAIReq := map[string]any{
+	audioData, err := callOpenAI(h.Config.OpenAIAPIKey, "https://api.openai.com/v1/audio/speech", map[string]any{
 		"model": "tts-1",
 		"input": text,
 		"voice": voice,
 		"speed": 1.0,
-	}
-
-	reqBody, _ := json.Marshal(openAIReq)
-	openAIURL := "https://api.openai.com/v1/audio/speech"
-
-	httpReq, err := http.NewRequest("POST", openAIURL, bytes.NewBuffer(reqBody))
-	if err != nil {
-		return "", err
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+h.Config.OpenAIAPIKey)
-
-	client := &http.Client{}
-	resp, err := client.Do(httpReq)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("OpenAI API error: %s", string(body))
-	}
-
-	// Read audio data
-	audioData, err := io.ReadAll(resp.Body)
+	})
 	if err != nil {
 		return "", err
 	}
@@ -309,7 +423,7 @@ func (h *Handler) GenerateImage(w http.ResponseWriter, r *http.Request) {
 
 // downloadImage downloads an image from a URL and returns the image data
 func downloadImage(url string) ([]byte, error) {
-	resp, err := http.Get(url)
+	resp, err := imageDownloadClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
