@@ -62,8 +62,8 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	orFilter := strings.Join(userIDs, ",")
 
 	// Query podcasts from followed users
-	query := fmt.Sprintf("podcasts?or=(%s)&select=*,users(username,avatar_url),likes:likes(count)&order=created_at.desc&limit=%s",
-		orFilter, limit)
+	query := fmt.Sprintf("podcasts?or=(%s)&select=%s,users(username,avatar_url),likes:likes(count)&order=created_at.desc&limit=%s",
+		orFilter, PodcastListCols, limit)
 
 	data, err := h.DB.Query(query, http.MethodGet, nil)
 	if err != nil {

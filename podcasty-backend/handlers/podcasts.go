@@ -25,6 +25,15 @@ type LikesAggregate struct {
 	Count int `json:"count"`
 }
 
+// PodcastListCols is every podcasts column except audio_url.
+//
+// Generated audio is stored inline as a base64 data URL, so a plain `select=*`
+// drags a whole MP3 per row — around a megabyte each, fifty rows at a time —
+// into list responses that never play anything. Only the podcast detail and
+// playlist views need audio_url; everything else must use this.
+const PodcastListCols = "id,podcast_name,description,image_url,play_count," +
+	"ai_voice,user_id,category,duration_seconds,chapters,created_at,updated_at"
+
 // Podcast represents a podcast in the database
 type Podcast struct {
 	ID              string           `json:"id"`
@@ -115,7 +124,7 @@ func (h *Handler) ListPodcasts(w http.ResponseWriter, r *http.Request) {
 
 	// Build Supabase query
 	// Use count for likes instead of fetching all records for better performance
-	supabaseQuery := fmt.Sprintf("select=*,users(username,avatar_url),likes:likes(count)&order=%s", orderClause)
+	supabaseQuery := fmt.Sprintf("select=%s,users(username,avatar_url),likes:likes(count)&order=%s", PodcastListCols, orderClause)
 
 	// Add search filter
 	if search != "" {
@@ -449,7 +458,7 @@ func (h *Handler) GetTrendingPodcasts(w http.ResponseWriter, r *http.Request) {
 	// Build Supabase query for trending podcasts
 	// Order by play_count descending, limit to recent podcasts
 	// Use count for likes instead of fetching all records
-	supabaseQuery := fmt.Sprintf("select=*,users(username,avatar_url),likes:likes(count)&order=play_count.desc,created_at.desc&limit=%d", limit)
+	supabaseQuery := fmt.Sprintf("select=%s,users(username,avatar_url),likes:likes(count)&order=play_count.desc,created_at.desc&limit=%d", PodcastListCols, limit)
 
 	// Query Supabase
 	data, err := h.DB.Query(fmt.Sprintf("podcasts?%s", supabaseQuery), http.MethodGet, nil)

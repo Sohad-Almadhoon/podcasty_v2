@@ -18,8 +18,13 @@ type Config struct {
 	SupabaseAnonKey    string
 	SupabaseServiceKey string
 
-	// OpenAI
-	OpenAIAPIKey string
+	// OpenAI. The model names are configurable because OpenAI retires models
+	// on its own schedule, and a project-scoped key may simply lack access to
+	// one — both surface as "the model does not exist". Swapping a model should
+	// not require a code change.
+	OpenAIAPIKey     string
+	OpenAIImageModel string
+	OpenAITTSModel   string
 
 	// Google OAuth
 	GoogleClientID     string
@@ -53,6 +58,8 @@ func Load() (*Config, error) {
 		SupabaseAnonKey:    os.Getenv("SUPABASE_ANON_KEY"),
 		SupabaseServiceKey: os.Getenv("SUPABASE_SERVICE_KEY"),
 		OpenAIAPIKey:       os.Getenv("OPENAI_API_KEY"),
+		OpenAIImageModel:   getEnv("OPENAI_IMAGE_MODEL", "dall-e-3"),
+		OpenAITTSModel:     getEnv("OPENAI_TTS_MODEL", "tts-1"),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		RedirectURL:        getEnv("REDIRECT_URL", "http://localhost:8080/auth/callback"),
@@ -104,6 +111,8 @@ func (c *Config) LogConfig() {
 	}
 
 	log.Printf("OpenAI API Key: %s", maskString(c.OpenAIAPIKey))
+	log.Printf("OpenAI Image Model: %s", c.OpenAIImageModel)
+	log.Printf("OpenAI TTS Model: %s", c.OpenAITTSModel)
 	log.Printf("Google Client ID: %s", maskString(c.GoogleClientID))
 	log.Printf("Frontend URL: %s", c.FrontendURL)
 	log.Println("====================")

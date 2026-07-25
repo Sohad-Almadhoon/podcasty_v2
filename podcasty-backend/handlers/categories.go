@@ -86,8 +86,9 @@ func (h *Handler) GetPodcastsByCategory(w http.ResponseWriter, r *http.Request) 
 
 	// Build query
 	query := fmt.Sprintf(
-		"podcasts?category=eq.%s&select=*,users(username,avatar_url)&order=created_at.desc&limit=%s&offset=%s",
+		"podcasts?category=eq.%s&select=%s,users(username,avatar_url)&order=created_at.desc&limit=%s&offset=%s",
 		url.QueryEscape(category),
+		PodcastListCols,
 		limit,
 		offset,
 	)

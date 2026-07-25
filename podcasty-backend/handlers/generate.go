@@ -231,7 +231,7 @@ func (h *Handler) GeneratePodcast(w http.ResponseWriter, r *http.Request) {
 // generateImageInternal is a helper function to generate image
 func (h *Handler) generateImageInternal(prompt string) (string, error) {
 	body, err := callOpenAI(h.Config.OpenAIAPIKey, "https://api.openai.com/v1/images/generations", map[string]any{
-		"model":  "dall-e-3",
+		"model":  h.Config.OpenAIImageModel,
 		"prompt": prompt,
 		"n":      1,
 		"size":   "1024x1024",
@@ -240,9 +240,13 @@ func (h *Handler) generateImageInternal(prompt string) (string, error) {
 		return "", err
 	}
 
+	// dall-e-3 answers with a temporary URL; the newer image models return the
+	// bytes inline as base64 and never populate url. Handle both so switching
+	// OPENAI_IMAGE_MODEL doesn't need a code change.
 	var openAIResp struct {
 		Data []struct {
-			URL string `json:"url"`
+			URL     string `json:"url"`
+			B64JSON string `json:"b64_json"`
 		} `json:"data"`
 	}
 
@@ -254,17 +258,25 @@ func (h *Handler) generateImageInternal(prompt string) (string, error) {
 		return "", fmt.Errorf("no image generated")
 	}
 
-	tempImageURL := openAIResp.Data[0].URL
-
-	// Download the image from OpenAI's temporary URL
-	imageData, err := downloadImage(tempImageURL)
-	if err != nil {
-		return "", fmt.Errorf("failed to download image: %v", err)
+	var imageData []byte
+	switch {
+	case openAIResp.Data[0].URL != "":
+		imageData, err = downloadImage(openAIResp.Data[0].URL)
+		if err != nil {
+			return "", fmt.Errorf("failed to download image: %v", err)
+		}
+	case openAIResp.Data[0].B64JSON != "":
+		imageData, err = base64.StdEncoding.DecodeString(openAIResp.Data[0].B64JSON)
+		if err != nil {
+			return "", fmt.Errorf("failed to decode image: %v", err)
+		}
+	default:
+		return "", fmt.Errorf("image response contained neither url nor b64_json")
 	}
 
-	// Generate a unique filename
-	timestamp := time.Now().Unix()
-	filename := fmt.Sprintf("podcast-covers/%d.png", timestamp)
+	// Generate a unique filename. Second precision collides when two podcasts
+	// are created in the same second, silently overwriting the first cover.
+	filename := fmt.Sprintf("podcast-covers/%d.png", time.Now().UnixNano())
 
 	// Upload to Supabase Storage
 	permanentURL, err := h.DB.UploadToStorage("podcasty", filename, imageData, "image/png")
@@ -278,7 +290,7 @@ func (h *Handler) generateImageInternal(prompt string) (string, error) {
 // generateAudioInternal is a helper function to generate audio and return as data URL
 func (h *Handler) generateAudioInternal(text, voice string) (string, error) {
 	audioData, err := callOpenAI(h.Config.OpenAIAPIKey, "https://api.openai.com/v1/audio/speech", map[string]any{
-		"model": "tts-1",
+		"model": h.Config.OpenAITTSModel,
 		"input": text,
 		"voice": voice,
 		"speed": 1.0,
@@ -287,11 +299,17 @@ func (h *Handler) generateAudioInternal(text, voice string) (string, error) {
 		return "", err
 	}
 
-	// Convert to base64 data URL
-	base64Audio := base64.StdEncoding.EncodeToString(audioData)
-	dataURL := fmt.Sprintf("data:audio/mpeg;base64,%s", base64Audio)
+	// Upload to Supabase Storage and store a URL, the same way cover art is
+	// handled. Returning a base64 data URL instead would put the whole MP3 in
+	// the podcasts row, where every query that touches the table pays for it.
+	filename := fmt.Sprintf("podcast-audio/%d.mp3", time.Now().UnixNano())
 
-	return dataURL, nil
+	permanentURL, err := h.DB.UploadToStorage("podcasty", filename, audioData, "audio/mpeg")
+	if err != nil {
+		return "", fmt.Errorf("failed to upload audio to storage: %v", err)
+	}
+
+	return permanentURL, nil
 }
 
 // GenerateImage generates AI cover image using DALL-E
@@ -341,7 +359,7 @@ func (h *Handler) GenerateImage(w http.ResponseWriter, r *http.Request) {
 
 	// Call OpenAI DALL-E API
 	openAIReq := map[string]any{
-		"model":  "dall-e-3",
+		"model":  h.Config.OpenAIImageModel,
 		"prompt": req.Prompt,
 		"n":      1,
 		"size":   req.Size,
@@ -498,7 +516,7 @@ func (h *Handler) GenerateAudio(w http.ResponseWriter, r *http.Request) {
 
 	// Call OpenAI TTS API
 	openAIReq := map[string]any{
-		"model": "tts-1",
+		"model": h.Config.OpenAITTSModel,
 		"input": req.Text,
 		"voice": req.Voice,
 		"speed": req.Speed,

@@ -39,8 +39,8 @@ func (h *Handler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Query bookmarks with podcast details
-	query := fmt.Sprintf("bookmarks?user_id=eq.%s&select=*,podcasts(*,users(username,avatar_url),likes:likes(count))&order=created_at.desc",
-		url.QueryEscape(userID))
+	query := fmt.Sprintf("bookmarks?user_id=eq.%s&select=*,podcasts(%s,users(username,avatar_url),likes:likes(count))&order=created_at.desc",
+		url.QueryEscape(userID), PodcastListCols)
 	data, err := h.DB.Query(query, http.MethodGet, nil)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to fetch bookmarks: %v", err), http.StatusInternalServerError)

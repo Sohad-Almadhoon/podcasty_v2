@@ -111,8 +111,9 @@ func (h *Handler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	seriesID := pathParts[3]
 
 	query := fmt.Sprintf(
-		"series?id=eq.%s&select=*,users(username,avatar_url),series_episodes(*,podcasts(*,users(username,avatar_url),likes:likes(count)))&series_episodes.order=season_number.asc,episode_number.asc",
+		"series?id=eq.%s&select=*,users(username,avatar_url),series_episodes(*,podcasts(%s,users(username,avatar_url),likes:likes(count)))&series_episodes.order=season_number.asc,episode_number.asc",
 		url.QueryEscape(seriesID),
+		PodcastListCols,
 	)
 
 	data, err := h.DB.Query(query, http.MethodGet, nil)
