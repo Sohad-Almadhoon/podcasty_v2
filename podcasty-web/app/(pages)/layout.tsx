@@ -8,6 +8,11 @@ import { getUser } from "../lib/supabase";
 import { redirect } from "next/navigation";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
+// Every route in this group is behind auth and reads cookies, so there is
+// nothing to prerender. Opting out here keeps Next from attempting a static
+// render and surfacing DYNAMIC_SERVER_USAGE at build time.
+export const dynamic = "force-dynamic";
+
 export default async function GroupedLayout({
   children,
 }: Readonly<{

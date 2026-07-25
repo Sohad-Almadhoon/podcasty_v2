@@ -11,6 +11,9 @@ export default async function BookmarksPage() {
   try {
     bookmarks = await fetchBookmarks();
   } catch (error) {
+    // Let Next's own bail-out signals through instead of reporting them as a
+    // failed fetch.
+    if ((error as { digest?: string })?.digest === 'DYNAMIC_SERVER_USAGE') throw error;
     console.error('Error fetching bookmarks:', error);
   }
   return (
