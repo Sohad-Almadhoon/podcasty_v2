@@ -61,6 +61,28 @@ func TestIsModelUnavailable(t *testing.T) {
 	}
 }
 
+// Generation and publish validated voices from separate lists, so a voice one
+// accepted the other rejected — producing a finished episode that refused to
+// save. Both now read ttsVoices; this pins the set so shrinking it is
+// deliberate rather than a silent break of whatever the clients offer.
+func TestVoicesCoverWhatClientsOffer(t *testing.T) {
+	// The voices the web form and the Flutter app put in their dropdowns.
+	clientOffered := []string{"alloy", "coral", "echo", "fable", "onyx", "nova", "shimmer"}
+
+	for _, v := range clientOffered {
+		if !isValidVoice(v) {
+			t.Errorf("voice %q is offered by the clients but rejected by the API", v)
+		}
+	}
+
+	if isValidVoice("nonexistent-voice") {
+		t.Error("isValidVoice accepted a voice that does not exist")
+	}
+	if isValidVoice("") {
+		t.Error("isValidVoice accepted an empty voice; callers must default it explicitly")
+	}
+}
+
 // An exhausted account and a rate limit share status 429 but need opposite
 // responses: one is worth retrying, the other never is.
 func TestOpenAIErrorDistinguishesQuotaFromRateLimit(t *testing.T) {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -277,11 +276,10 @@ func (h *Handler) CreatePodcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate AI voice if provided
-	validVoices := []string{"alloy", "echo", "fable", "onyx", "nova", "shimmer"}
+	// Validate AI voice if provided, against the same list generation accepts.
 	if req.AIVoice != "" {
-		if !slices.Contains(validVoices, req.AIVoice) {
-			http.Error(w, fmt.Sprintf("Invalid ai_voice. Must be one of: %s", strings.Join(validVoices, ", ")), http.StatusBadRequest)
+		if !isValidVoice(req.AIVoice) {
+			http.Error(w, fmt.Sprintf("Invalid ai_voice. Must be one of: %s", strings.Join(ttsVoices, ", ")), http.StatusBadRequest)
 			return
 		}
 	} else {

@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,6 +24,16 @@ const openAIMaxAttempts = 3
 // ttsMaxInput is the input ceiling for the tts-1 model. Anything longer is
 // rejected by OpenAI with a 400 that reads like a generic bad request.
 const ttsMaxInput = 4096
+
+// ttsVoices is the set of speech voices the clients offer, and the single
+// source of truth for both generating and publishing a podcast. Generation and
+// publish each used to carry their own list: generation did not validate at
+// all, so a voice the publish list omitted produced a finished episode that
+// then refused to save.
+var ttsVoices = []string{"alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"}
+
+// isValidVoice reports whether v is a voice this API accepts.
+func isValidVoice(v string) bool { return slices.Contains(ttsVoices, v) }
 
 // Shared clients so connections are reused. The zero http.Client has no timeout
 // at all, which lets a stalled call hold the request open indefinitely — the
@@ -195,6 +206,14 @@ func (h *Handler) GeneratePodcast(w http.ResponseWriter, r *http.Request) {
 
 	if req.Voice == "" {
 		req.Voice = "alloy"
+	}
+
+	// Reject the voice here rather than at publish time. Generation is the
+	// expensive half — an unvalidated voice used to produce a full episode that
+	// CreatePodcast then refused to save, wasting both OpenAI calls.
+	if !isValidVoice(req.Voice) {
+		http.Error(w, fmt.Sprintf("Invalid voice. Must be one of: %s", strings.Join(ttsVoices, ", ")), http.StatusBadRequest)
+		return
 	}
 
 	// Check if OpenAI API key is configured
@@ -595,16 +614,8 @@ func (h *Handler) GenerateAudio(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate voice
-	validVoices := map[string]bool{
-		"alloy":   true,
-		"echo":    true,
-		"fable":   true,
-		"onyx":    true,
-		"nova":    true,
-		"shimmer": true,
-	}
-	if !validVoices[req.Voice] {
-		http.Error(w, "Invalid voice. Must be one of: alloy, echo, fable, onyx, nova, shimmer", http.StatusBadRequest)
+	if !isValidVoice(req.Voice) {
+		http.Error(w, fmt.Sprintf("Invalid voice. Must be one of: %s", strings.Join(ttsVoices, ", ")), http.StatusBadRequest)
 		return
 	}
 
