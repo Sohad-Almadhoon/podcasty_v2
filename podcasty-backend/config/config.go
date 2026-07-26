@@ -18,10 +18,15 @@ type Config struct {
 	SupabaseAnonKey    string
 	SupabaseServiceKey string
 
-	// OpenAI. The model names are configurable because OpenAI retires models
-	// on its own schedule, and a project-scoped key may simply lack access to
-	// one — both surface as "the model does not exist". Swapping a model should
-	// not require a code change.
+	// OpenAI. The model names are configurable because OpenAI retires models on
+	// its own schedule, and a project-scoped key may simply lack access to one —
+	// both surface as "the model does not exist". Swapping a model should not
+	// require a code change.
+	//
+	// OpenAIImageModel is deliberately left empty by default: an empty value
+	// means "try the known image models in order", which keeps generation
+	// working through a retirement. Setting it pins one model and disables the
+	// fallback.
 	OpenAIAPIKey     string
 	OpenAIImageModel string
 	OpenAITTSModel   string
@@ -58,7 +63,7 @@ func Load() (*Config, error) {
 		SupabaseAnonKey:    os.Getenv("SUPABASE_ANON_KEY"),
 		SupabaseServiceKey: os.Getenv("SUPABASE_SERVICE_KEY"),
 		OpenAIAPIKey:       os.Getenv("OPENAI_API_KEY"),
-		OpenAIImageModel:   getEnv("OPENAI_IMAGE_MODEL", "dall-e-3"),
+		OpenAIImageModel:   os.Getenv("OPENAI_IMAGE_MODEL"),
 		OpenAITTSModel:     getEnv("OPENAI_TTS_MODEL", "tts-1"),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
@@ -111,7 +116,11 @@ func (c *Config) LogConfig() {
 	}
 
 	log.Printf("OpenAI API Key: %s", maskString(c.OpenAIAPIKey))
-	log.Printf("OpenAI Image Model: %s", c.OpenAIImageModel)
+	if c.OpenAIImageModel == "" {
+		log.Println("OpenAI Image Model: <auto> (falls back through known image models)")
+	} else {
+		log.Printf("OpenAI Image Model: %s (pinned, no fallback)", c.OpenAIImageModel)
+	}
 	log.Printf("OpenAI TTS Model: %s", c.OpenAITTSModel)
 	log.Printf("Google Client ID: %s", maskString(c.GoogleClientID))
 	log.Printf("Frontend URL: %s", c.FrontendURL)

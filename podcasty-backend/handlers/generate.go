@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -228,10 +229,115 @@ func (h *Handler) GeneratePodcast(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// generateImageInternal is a helper function to generate image
+// imageModelCandidates lists the image models to try, in order. An explicit
+// OPENAI_IMAGE_MODEL is used on its own: if an operator named a model,
+// quietly substituting another would hide their mistake. With nothing set,
+// walk OpenAI's image models newest-first, because which ones a given key can
+// reach depends on the account and on what OpenAI has since retired.
+func (h *Handler) imageModelCandidates() []string {
+	if m := strings.TrimSpace(h.Config.OpenAIImageModel); m != "" {
+		return []string{m}
+	}
+	return []string{"gpt-image-1", "dall-e-3", "dall-e-2"}
+}
+
+// isModelUnavailable reports whether a failure means "this key cannot use this
+// model". A retired model and a project-scoped key lacking permission for a
+// live one are indistinguishable in OpenAI's response, and both are worth
+// trying the next candidate for.
+func isModelUnavailable(err error) bool {
+	var ue *upstreamError
+	if !errors.As(err, &ue) {
+		return false
+	}
+	switch ue.Status {
+	case http.StatusBadRequest, http.StatusNotFound, http.StatusForbidden:
+	default:
+		return false
+	}
+	msg := strings.ToLower(ue.Message)
+	return strings.Contains(msg, "does not exist") ||
+		strings.Contains(msg, "model_not_found") ||
+		strings.Contains(msg, "do not have access")
+}
+
+// accessibleImageModels asks OpenAI which models this key can actually reach,
+// so a model-unavailable failure can name the alternatives instead of leaving
+// whoever reads the error to guess. Best-effort: any failure yields no names.
+func accessibleImageModels(apiKey string) []string {
+	req, err := http.NewRequest("GET", "https://api.openai.com/v1/models", nil)
+	if err != nil {
+		return nil
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	resp, err := openAIClient.Do(req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	var parsed struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil
+	}
+
+	var out []string
+	for _, m := range parsed.Data {
+		if strings.Contains(m.ID, "image") || strings.HasPrefix(m.ID, "dall-e") {
+			out = append(out, m.ID)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// generateImageInternal generates a cover image, falling through the candidate
+// models until one is reachable.
 func (h *Handler) generateImageInternal(prompt string) (string, error) {
+	candidates := h.imageModelCandidates()
+
+	var lastErr error
+	for _, model := range candidates {
+		url, err := h.requestImage(model, prompt)
+		if err == nil {
+			return url, nil
+		}
+		lastErr = err
+		if !isModelUnavailable(err) {
+			return "", err
+		}
+		log.Printf("⚠️ [generate] image model %q unavailable: %v", model, err)
+	}
+
+	// Every candidate was rejected. Say what the key can actually reach — that
+	// is the one thing the operator needs and cannot see from here.
+	suffix := fmt.Sprintf("tried %s", strings.Join(candidates, ", "))
+	if models := accessibleImageModels(h.Config.OpenAIAPIKey); len(models) > 0 {
+		suffix += fmt.Sprintf("; this API key can use: %s — set OPENAI_IMAGE_MODEL to one of them",
+			strings.Join(models, ", "))
+	} else {
+		suffix += "; this API key lists no image models at all — check the project's model permissions"
+	}
+
+	return "", &upstreamError{
+		Status:  statusOf(lastErr),
+		Message: fmt.Sprintf("%v (%s)", lastErr, suffix),
+	}
+}
+
+// requestImage generates one image with a specific model and stores it.
+func (h *Handler) requestImage(model, prompt string) (string, error) {
 	body, err := callOpenAI(h.Config.OpenAIAPIKey, "https://api.openai.com/v1/images/generations", map[string]any{
-		"model":  h.Config.OpenAIImageModel,
+		"model":  model,
 		"prompt": prompt,
 		"n":      1,
 		"size":   "1024x1024",
